@@ -3,86 +3,120 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f4efe4">
+  <meta name="theme-color" content="#1a2230">
   <title>Tango</title>
   <style>
     :root {
-      --bg: #f4efe4;
-      --ink: #1c2430;
-      --muted: #5c6674;
-      --card: #fffdf8;
-      --line: #d9d0c0;
+      --bg: #141b28;
+      --bg2: #1c2740;
+      --ink: #f4efe4;
+      --muted: #b7c0d0;
+      --card: #243049;
+      --line: #3a4a68;
       --sun: #f0b429;
-      --moon: #3a4a8c;
-      --good: #1f7a4d;
-      --bad: #c0392b;
-      --easy: #2e7d4f;
-      --medium: #b36b00;
-      --hard: #b42318;
-      --cell: 52px;
-      --gap: 16px;
-      --radius: 14px;
+      --moon: #8ea0ff;
+      --good: #3dcea0;
+      --bad: #ff6b6b;
+      --easy: #5ee0a0;
+      --medium: #ffc14d;
+      --hard: #ff7a6e;
+      --radius: 18px;
     }
 
     * { box-sizing: border-box; }
     html, body { margin: 0; }
     body {
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      background: radial-gradient(1200px 600px at 20% -10%, #fff8ea, var(--bg));
+      background:
+        radial-gradient(900px 480px at 10% -10%, #3a2a12, transparent 55%),
+        radial-gradient(700px 420px at 110% 8%, #24306a, transparent 50%),
+        var(--bg);
       color: var(--ink);
       min-height: 100dvh;
-      padding: max(12px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom));
+      padding: max(10px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
       touch-action: manipulation;
     }
 
     .wrap {
-      max-width: 480px;
+      max-width: 520px;
       margin: 0 auto;
     }
 
     header {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .back {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 1.15rem;
+      flex: none;
     }
 
     h1 {
-      font-size: 1.45rem;
+      font-size: 1.35rem;
       letter-spacing: -0.03em;
       margin: 0;
     }
 
-    .meta {
-      color: var(--muted);
-      font-size: 0.92rem;
-      font-weight: 650;
+    .level-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.06);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 6px 10px 6px 12px;
+      min-height: 40px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
     }
+    .level-pill .chev { opacity: 0.7; font-size: 0.8rem; }
 
     .diff {
       text-transform: capitalize;
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
     }
     .diff.easy { color: var(--easy); }
     .diff.medium { color: var(--medium); }
     .diff.hard { color: var(--hard); }
 
     .card {
-      background: var(--card);
+      background: linear-gradient(180deg, #2a3856, var(--card));
       border: 1px solid var(--line);
-      border-radius: calc(var(--radius) + 4px);
+      border-radius: calc(var(--radius) + 6px);
       padding: 14px;
-      box-shadow: 0 8px 24px rgba(40, 30, 10, 0.06);
+      box-shadow: 0 18px 50px rgba(0,0,0,0.28);
     }
 
-    .board-wrap {
-      display: flex;
-      justify-content: center;
-    }
+    .board-wrap { display: flex; justify-content: center; }
 
     .board {
-      --cell: min(52px, calc((100vw - 56px - 5 * 16px) / 6));
-      --gap: min(16px, 4vw);
+      --gap: clamp(8px, 2.8vw, 14px);
+      --cell: clamp(42px, calc((min(100vw, 520px) - 48px - 5 * var(--gap)) / 6), 64px);
       display: grid;
       grid-template-columns: repeat(5, var(--cell) var(--gap)) var(--cell);
       grid-template-rows: repeat(5, var(--cell) var(--gap)) var(--cell);
@@ -93,9 +127,9 @@
       width: var(--cell);
       height: var(--cell);
       min-height: 0;
-      border: 1.5px solid #cfc4b0;
-      border-radius: 12px;
-      background: #fbf7ef;
+      border: 1.5px solid #4a5c80;
+      border-radius: 14px;
+      background: #1a2438;
       display: grid;
       place-items: center;
       padding: 0;
@@ -106,13 +140,15 @@
       appearance: none;
       color: inherit;
       -webkit-tap-highlight-color: transparent;
+      transition: transform 0.12s ease, border-color 0.2s ease, background 0.2s ease;
     }
+    .cell:active:not(:disabled) { transform: scale(0.94); }
     .cell:focus-visible {
-      outline: 2px solid var(--moon);
+      outline: 2px solid var(--sun);
       outline-offset: 2px;
     }
     .cell.given {
-      background: #efe6d4;
+      background: #31415f;
       cursor: default;
     }
     .cell.sun::after,
@@ -125,27 +161,29 @@
     }
     .cell.sun::after {
       background: radial-gradient(circle at 32% 28%, #ffe58a, var(--sun) 55%, #d48900);
-      box-shadow: 0 0 0 1px #c67c00;
+      box-shadow: 0 0 12px rgba(240, 180, 41, 0.45);
     }
     .cell.moon::after {
-      background: var(--moon);
-      box-shadow: inset -7px -4px 0 0 #c9d0ee;
+      background: #3a4a8c;
+      box-shadow: inset -7px -4px 0 0 #c9d0ee, 0 0 10px rgba(142, 160, 255, 0.28);
     }
+    .cell.pop::after { animation: pop 0.28s ease; }
     .cell.error {
       border-color: var(--bad);
-      background: #fdecea;
-      box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.18);
+      background: #3a2430;
+      animation: shake 0.38s ease;
     }
     .cell.win {
       border-color: var(--good);
+      animation: glow 0.7s ease both;
     }
 
     .edge {
       display: grid;
       place-items: center;
-      color: #6a5a3e;
+      color: #d7c39a;
       font-weight: 800;
-      font-size: calc(var(--gap) * 0.85);
+      font-size: calc(var(--gap) * 0.9);
       line-height: 1;
       pointer-events: none;
     }
@@ -163,76 +201,169 @@
     .status.good { color: var(--good); }
 
     .controls {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 8px;
       margin-top: 12px;
     }
+    @media (min-width: 420px) {
+      .controls { grid-template-columns: repeat(4, 1fr); }
+    }
 
-    button, select {
+    button {
       font: inherit;
-      border-radius: 10px;
+      border-radius: 12px;
       border: 1px solid var(--line);
-      background: #fff;
+      background: rgba(255,255,255,0.06);
       color: var(--ink);
       min-height: 44px;
-    }
-    button {
-      flex: 1 1 0;
       font-weight: 700;
       cursor: pointer;
       padding: 0 12px;
     }
     button.primary {
-      background: var(--ink);
-      color: #fff;
-      border-color: var(--ink);
+      background: var(--sun);
+      color: #1c1404;
+      border-color: #e0a41a;
     }
-    button:disabled {
-      opacity: 0.45;
-      cursor: default;
+    button:disabled { opacity: 0.38; cursor: default; }
+    .cell:disabled { opacity: 1; }
+
+    .aux {
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
     }
-    .cell:disabled {
-      opacity: 1;
+    .ghost {
+      background: transparent;
+      border: 0;
+      color: var(--muted);
+      min-height: 36px;
     }
-    select {
-      flex: 1 1 100%;
+
+    .sheet {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 12, 20, 0.72);
+      display: grid;
+      place-items: end center;
+      padding: 12px;
+      z-index: 20;
+    }
+    .sheet[hidden] { display: none !important; }
+    .sheet-card {
+      width: min(520px, 100%);
+      max-height: min(78dvh, 640px);
+      overflow: auto;
+      background: #1e2c48;
+      border: 1px solid var(--line);
+      border-radius: 22px 22px 16px 16px;
+      padding: 16px;
+      animation: rise 0.22s ease;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    }
+    .sheet-card h2 { margin: 0 0 10px; font-size: 1.15rem; }
+    .chips { display: flex; gap: 8px; margin-bottom: 12px; }
+    .chip {
+      border-radius: 999px;
+      min-height: 36px;
       padding: 0 12px;
     }
-
-    details {
-      margin-top: 14px;
-      color: var(--muted);
-      font-size: 0.92rem;
+    .chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
     }
-    details summary {
-      cursor: pointer;
-      font-weight: 700;
-      color: var(--ink);
+    .level-grid button {
+      min-height: 44px;
+      position: relative;
     }
-    details ul {
-      margin: 8px 0 0;
-      padding-left: 1.15rem;
-    }
-    details li { margin: 4px 0; }
-
-    .sr-only {
+    .level-grid button.current { outline: 2px solid var(--sun); }
+    .level-grid button.done::after {
+      content: "";
       position: absolute;
-      width: 1px;
-      height: 1px;
+      top: 6px;
+      right: 6px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--good);
+    }
+    .sheet-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .sheet-actions button { flex: 1; }
+    .rules-list { margin: 0; padding-left: 1.15rem; color: var(--muted); }
+    .rules-list li { margin: 8px 0; }
+
+    .win-card {
+      text-align: center;
+      position: relative;
       overflow: hidden;
-      clip: rect(0 0 0 0);
+      place-self: center;
+      border-radius: 22px;
+    }
+    .burst {
+      position: absolute;
+      inset: -20px;
+      pointer-events: none;
+    }
+    .burst span {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      animation: float 1.1s ease both;
+    }
+    .burst span:nth-child(odd) { background: var(--sun); }
+    .burst span:nth-child(even) { background: var(--moon); }
+
+    @keyframes pop {
+      0% { transform: scale(0.4); opacity: 0.4; }
+      70% { transform: scale(1.12); }
+      100% { transform: scale(1); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+    @keyframes glow {
+      0% { box-shadow: 0 0 0 rgba(61, 206, 160, 0); transform: scale(0.96); }
+      60% { box-shadow: 0 0 18px rgba(61, 206, 160, 0.45); transform: scale(1.04); }
+      100% { box-shadow: 0 0 0 rgba(61, 206, 160, 0); transform: scale(1); }
+    }
+    @keyframes float {
+      0% { transform: translate(0, 8px) scale(0.4); opacity: 0; }
+      30% { opacity: 1; }
+      100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; }
+    }
+
+    @keyframes rise {
+      from { transform: translateY(18px); opacity: 0.4; }
+      to { transform: none; opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::after { animation: none !important; transition: none !important; }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>Tango</h1>
-      <div class="meta">
-        Level <span id="levelNum">1</span>
-        · <span id="diff" class="diff easy">easy</span>
+      <div class="brand">
+        <a class="back" href="../" aria-label="All games">←</a>
+        <h1>Tango</h1>
       </div>
+      <button type="button" class="level-pill" id="openPicker" aria-haspopup="dialog">
+        Level <span id="levelNum">1</span>
+        <span id="diff" class="diff easy">easy</span>
+        <span class="chev">▾</span>
+      </button>
     </header>
 
     <div class="card">
@@ -245,21 +376,54 @@
         <button type="button" id="checkBtn" class="primary">Check</button>
         <button type="button" id="resetBtn">Reset</button>
         <button type="button" id="nextBtn">Next</button>
-        <label class="sr-only" for="picker">Choose level</label>
-        <select id="picker"></select>
       </div>
     </div>
+    <div class="aux">
+      <button type="button" class="ghost" id="openRules">Rules</button>
+    </div>
+  </div>
 
-    <details>
-      <summary>Rules</summary>
-      <ul>
+  <div id="pickerSheet" class="sheet" hidden>
+    <div class="sheet-card" role="dialog" aria-labelledby="pickerTitle">
+      <h2 id="pickerTitle">Choose a level</h2>
+      <div class="chips">
+        <button type="button" class="chip on" data-diff="easy">Easy</button>
+        <button type="button" class="chip" data-diff="medium">Medium</button>
+        <button type="button" class="chip" data-diff="hard">Hard</button>
+      </div>
+      <div id="levelGrid" class="level-grid"></div>
+      <div class="sheet-actions">
+        <button type="button" id="closePicker">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="rulesSheet" class="sheet" hidden>
+    <div class="sheet-card" role="dialog" aria-labelledby="rulesTitle">
+      <h2 id="rulesTitle">Rules</h2>
+      <ul class="rules-list">
         <li>Each row and column has 3 suns and 3 moons.</li>
         <li>No three identical symbols may sit in a line.</li>
         <li>Cells with <strong>=</strong> between them must match.</li>
         <li>Cells with <strong>×</strong> between them must differ.</li>
         <li>Shaded starting cells stay locked. Tap an empty cell to cycle sun → moon → empty.</li>
       </ul>
-    </details>
+      <div class="sheet-actions">
+        <button type="button" id="closeRules" class="primary">Got it</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="winSheet" class="sheet" hidden>
+    <div class="sheet-card win-card" role="dialog" aria-labelledby="winTitle">
+      <div class="burst" id="burst" aria-hidden="true"></div>
+      <h2 id="winTitle">Solved</h2>
+      <p id="winCopy" class="status good">Nice work.</p>
+      <div class="sheet-actions">
+        <button type="button" id="stayBtn">Stay</button>
+        <button type="button" id="winNextBtn" class="primary">Next level</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -272,16 +436,23 @@
     const statusEl = document.getElementById("status");
     const levelNumEl = document.getElementById("levelNum");
     const diffEl = document.getElementById("diff");
-    const picker = document.getElementById("picker");
     const prevBtn = document.getElementById("prevBtn");
     const nextBtn = document.getElementById("nextBtn");
     const resetBtn = document.getElementById("resetBtn");
     const checkBtn = document.getElementById("checkBtn");
+    const pickerSheet = document.getElementById("pickerSheet");
+    const rulesSheet = document.getElementById("rulesSheet");
+    const winSheet = document.getElementById("winSheet");
+    const levelGrid = document.getElementById("levelGrid");
+    const winCopy = document.getElementById("winCopy");
+    const winNextBtn = document.getElementById("winNextBtn");
+    const burstEl = document.getElementById("burst");
 
     let levelIndex = 0;
     let play = [];
     let errors = new Set();
     let won = false;
+    let pickerDiff = "easy";
 
     function idx(r, c) { return r * N + c; }
 
@@ -296,6 +467,11 @@
     function saveProgress(patch) {
       const cur = loadProgress();
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patch }));
+    }
+
+    function completedSet() {
+      const completed = loadProgress().completed;
+      return new Set(Array.isArray(completed) ? completed : []);
     }
 
     function markCompleted(id) {
@@ -314,18 +490,40 @@
       statusEl.className = "status" + (kind ? " " + kind : "");
     }
 
-    function buildPicker() {
-      picker.innerHTML = LEVELS.map((lv, i) => {
-        const n = i + 1;
-        return `<option value="${i}">Level ${n} — ${lv.difficulty}</option>`;
-      }).join("");
+    function openSheet(el) {
+      el.hidden = false;
+    }
+
+    function closeSheet(el) {
+      el.hidden = true;
+    }
+
+    function renderPicker() {
+      const done = completedSet();
+      levelGrid.innerHTML = "";
+      LEVELS.forEach((lv, i) => {
+        if (lv.difficulty !== pickerDiff) return;
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = String(lv.id);
+        if (i === levelIndex) b.classList.add("current");
+        if (done.has(lv.id)) b.classList.add("done");
+        b.addEventListener("click", () => {
+          closeSheet(pickerSheet);
+          loadLevel(i);
+        });
+        levelGrid.appendChild(b);
+      });
+      document.querySelectorAll(".chip").forEach((chip) => {
+        chip.classList.toggle("on", chip.dataset.diff === pickerDiff);
+      });
     }
 
     function placeAt(r, c) {
       return `${r * 2 + 1} / ${c * 2 + 1}`;
     }
 
-    function renderBoard() {
+    function renderBoard(popIndex) {
       const lv = currentLevel();
       boardEl.innerHTML = "";
       const frag = document.createDocumentFragment();
@@ -337,13 +535,16 @@
           btn.type = "button";
           btn.className = "cell";
           btn.style.gridArea = placeAt(r, c);
-          btn.dataset.i = String(i);
           const given = lv.grid[i] !== EMPTY;
           if (given) btn.classList.add("given");
           if (play[i] === SUN) btn.classList.add("sun");
           if (play[i] === MOON) btn.classList.add("moon");
           if (errors.has(i)) btn.classList.add("error");
-          if (won) btn.classList.add("win");
+          if (won) {
+            btn.classList.add("win");
+            btn.style.animationDelay = (r + c) * 40 + "ms";
+          }
+          if (i === popIndex && play[i]) btn.classList.add("pop");
           btn.disabled = given;
           const label = play[i] === SUN ? "sun" : play[i] === MOON ? "moon" : "empty";
           btn.setAttribute("aria-label", `Row ${r + 1}, column ${c + 1}, ${label}${given ? ", given" : ""}`);
@@ -383,7 +584,6 @@
       levelNumEl.textContent = String(lv.id);
       diffEl.textContent = lv.difficulty;
       diffEl.className = "diff " + lv.difficulty;
-      picker.value = String(levelIndex);
       prevBtn.disabled = levelIndex === 0;
       nextBtn.disabled = levelIndex === LEVELS.length - 1;
     }
@@ -394,6 +594,7 @@
       play = lv.grid.slice();
       errors = new Set();
       won = false;
+      closeSheet(winSheet);
       saveProgress({ lastPlayed: levelIndex });
       updateChrome();
       renderBoard();
@@ -406,7 +607,7 @@
       if (currentLevel().grid[i] !== EMPTY || won) return;
       play[i] = play[i] === EMPTY ? SUN : play[i] === SUN ? MOON : EMPTY;
       errors = new Set();
-      renderBoard();
+      renderBoard(i);
       if (play.every(Boolean) && findConflicts().size === 0) {
         onWin();
       } else {
@@ -482,13 +683,32 @@
       return bad;
     }
 
+    function spawnBurst() {
+      burstEl.innerHTML = "";
+      for (let i = 0; i < 14; i++) {
+        const s = document.createElement("span");
+        const ang = (Math.PI * 2 * i) / 14;
+        s.style.left = "50%";
+        s.style.top = "42%";
+        s.style.setProperty("--dx", Math.round(Math.cos(ang) * (70 + (i % 3) * 24)) + "px");
+        s.style.setProperty("--dy", Math.round(Math.sin(ang) * (48 + (i % 4) * 18) - 20) + "px");
+        s.style.animationDelay = (i * 28) + "ms";
+        burstEl.appendChild(s);
+      }
+    }
+
     function onWin() {
       won = true;
       errors = new Set();
       markCompleted(currentLevel().id);
       renderBoard();
       const more = levelIndex < LEVELS.length - 1;
-      setStatus(more ? "Solved. Next level when you are ready." : "Solved. That was the last level.", "good");
+      const msg = more ? "Solved. Next level when you are ready." : "Solved. That was the last level.";
+      setStatus(msg, "good");
+      winCopy.textContent = more ? "The board is perfect." : "That was the last level.";
+      winNextBtn.disabled = !more;
+      spawnBurst();
+      openSheet(winSheet);
     }
 
     function check() {
@@ -512,9 +732,28 @@
     nextBtn.addEventListener("click", () => loadLevel(levelIndex + 1));
     resetBtn.addEventListener("click", () => loadLevel(levelIndex));
     checkBtn.addEventListener("click", check);
-    picker.addEventListener("change", () => loadLevel(Number(picker.value)));
+    document.getElementById("openPicker").addEventListener("click", () => {
+      pickerDiff = currentLevel().difficulty;
+      renderPicker();
+      openSheet(pickerSheet);
+    });
+    document.getElementById("closePicker").addEventListener("click", () => closeSheet(pickerSheet));
+    document.getElementById("openRules").addEventListener("click", () => openSheet(rulesSheet));
+    document.getElementById("closeRules").addEventListener("click", () => closeSheet(rulesSheet));
+    document.getElementById("stayBtn").addEventListener("click", () => closeSheet(winSheet));
+    winNextBtn.addEventListener("click", () => loadLevel(levelIndex + 1));
+    document.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        pickerDiff = chip.dataset.diff;
+        renderPicker();
+      });
+    });
+    [pickerSheet, rulesSheet, winSheet].forEach((sheet) => {
+      sheet.addEventListener("click", (e) => {
+        if (e.target === sheet) closeSheet(sheet);
+      });
+    });
 
-    buildPicker();
     const progress = loadProgress();
     const start = Number.isInteger(progress.lastPlayed) ? progress.lastPlayed : 0;
     loadLevel(start);
