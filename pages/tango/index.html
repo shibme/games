@@ -92,6 +92,21 @@
       font-weight: 700;
     }
     .level-pill .chev { opacity: 0.7; font-size: 0.8rem; }
+    .header-tools {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .timer {
+      font-variant-numeric: tabular-nums;
+      font-weight: 750;
+      font-size: 0.92rem;
+      color: var(--muted);
+      min-width: 3.4em;
+      text-align: right;
+    }
+    .level-pill #levelNum[hidden] { display: none; }
 
     .diff {
       text-transform: capitalize;
@@ -263,7 +278,15 @@
       box-shadow: 0 24px 60px rgba(0,0,0,0.45);
     }
     .sheet-card h2 { margin: 0 0 10px; font-size: 1.15rem; }
-    .chips { display: flex; gap: 8px; margin-bottom: 12px; }
+    .chips { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .picker-note {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+    .picker-note[hidden], #newPuzzleBtn[hidden], #levelGrid[hidden] { display: none !important; }
+    #newPuzzleBtn { width: 100%; margin-bottom: 4px; }
     .chip {
       border-radius: 999px;
       min-height: 36px;
@@ -443,11 +466,15 @@
         <a class="back" href="../" aria-label="All games">←</a>
         <h1>Tango</h1>
       </div>
-      <button type="button" class="level-pill" id="openPicker" aria-haspopup="dialog">
-        Level <span id="levelNum">1</span>
-        <span id="diff" class="diff easy">easy</span>
-        <span class="chev">▾</span>
-      </button>
+      <div class="header-tools">
+        <div id="timer" class="timer" aria-label="Solve time">0:00</div>
+        <button type="button" class="level-pill" id="openPicker" aria-haspopup="dialog">
+          <span id="modeLabel">Level</span>
+          <span id="levelNum">1</span>
+          <span id="diff" class="diff easy">easy</span>
+          <span class="chev">▾</span>
+        </button>
+      </div>
     </header>
 
     <div class="card">
@@ -471,11 +498,17 @@
   <div id="pickerSheet" class="sheet" hidden>
     <div class="sheet-card" role="dialog" aria-labelledby="pickerTitle">
       <h2 id="pickerTitle">Choose a level</h2>
-      <div class="chips">
+      <div class="chips" id="modeChips">
+        <button type="button" class="chip on" data-mode="classic">Classic</button>
+        <button type="button" class="chip" data-mode="generated">Generated</button>
+      </div>
+      <div class="chips" id="diffChips">
         <button type="button" class="chip on" data-diff="easy">Easy</button>
         <button type="button" class="chip" data-diff="medium">Medium</button>
         <button type="button" class="chip" data-diff="hard">Hard</button>
       </div>
+      <p id="generatedCopy" class="picker-note" hidden>Puzzles are built and checked in this browser for the difficulty you pick.</p>
+      <button type="button" id="newPuzzleBtn" class="primary" hidden>New puzzle</button>
       <div id="levelGrid" class="level-grid"></div>
       <div class="sheet-actions">
         <button type="button" id="closePicker">Close</button>
@@ -518,6 +551,9 @@
         <div class="stat"><strong id="statChecks">0</strong><span>Checks used</span></div>
         <div class="stat"><strong id="statMistakes">0</strong><span>Mistakes detected</span></div>
         <div class="stat"><strong id="statResets">0</strong><span>Resets used</span></div>
+        <div class="stat"><strong id="statLastTime">—</strong><span>Last solve</span></div>
+        <div class="stat"><strong id="statBestTime">—</strong><span>Best solve</span></div>
+        <div class="stat"><strong id="statAvgTime">—</strong><span>Average solve</span></div>
       </div>
       <div class="sheet-actions">
         <button type="button" id="closeStats" class="primary">Done</button>
@@ -543,10 +579,20 @@
     const STORAGE_KEY = "tango-progress";
     const LEVELS = [{"id":1,"difficulty":"easy","grid":[1,2,0,0,1,2,0,0,0,1,1,0,0,0,0,2,2,0,0,2,0,0,0,2,0,1,2,0,0,0,1,0,2,0,2,0],"hEdges":[[null,null,null,null,null],[null,null,null,null,"neq"],[null,null,null,null,null],[null,null,null,null,null],[null,"neq",null,null,null],["neq",null,null,"neq",null]],"vEdges":[[null,null,null,"neq",null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,"eq","neq",null,null]]},{"id":2,"difficulty":"easy","grid":[2,0,0,0,0,1,0,0,1,0,2,0,0,2,0,0,2,0,0,1,2,0,0,0,0,0,0,2,2,0,0,2,2,0,0,2],"hEdges":[[null,null,null,null,"eq"],[null,null,null,null,null],[null,null,null,null,null],["neq",null,null,null,null],["neq",null,"neq",null,null],[null,null,null,null,null]],"vEdges":[[null,null,"neq",null,null,"neq"],[null,"eq",null,null,null,null],[null,null,null,null,null,null],[null,null,null,"neq",null,null],[null,"neq",null,null,null,null]]},{"id":3,"difficulty":"easy","grid":[2,0,0,1,0,0,1,1,2,2,0,0,0,0,0,1,0,0,0,0,0,1,2,1,0,0,2,0,1,0,0,2,1,2,0,0],"hEdges":[[null,null,null,null,null],[null,null,"eq",null,null],[null,"neq",null,null,null],[null,null,null,null,"neq"],["eq","neq",null,null,null],["eq",null,null,null,null]],"vEdges":[["neq",null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,"eq",null,null,null],[null,null,null,null,null,null]]},{"id":4,"difficulty":"easy","grid":[0,0,0,1,2,0,1,2,0,2,0,2,0,0,0,0,1,1,0,0,0,0,0,0,2,1,0,1,0,0,0,1,2,0,0,2],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,"neq",null],[null,null,null,"neq",null],[null,null,null,null,"neq"]],"vEdges":[["neq",null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,"neq",null,null],[null,null,"neq",null,null,null],[null,null,null,null,null,"neq"]]},{"id":5,"difficulty":"easy","grid":[0,0,1,0,2,0,0,0,2,0,0,0,0,0,0,1,0,0,1,2,0,0,1,2,0,0,0,2,0,1,0,0,2,1,2,0],"hEdges":[[null,null,null,null,null],[null,null,null,"neq","eq"],[null,null,"eq",null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,"neq",null,null,null,null],[null,null,null,null,null,null],["eq",null,null,"neq",null,null],[null,"neq",null,null,null,null],["neq",null,null,null,null,null]]},{"id":6,"difficulty":"easy","grid":[0,1,0,1,0,1,0,1,0,0,1,0,1,0,0,1,0,0,0,1,2,0,0,0,0,0,2,0,0,0,0,0,1,2,1,0],"hEdges":[[null,"neq",null,null,null],[null,null,"neq","neq",null],[null,null,null,"neq",null],[null,null,null,null,null],[null,"eq",null,null,null],["neq",null,null,null,"neq"]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":7,"difficulty":"easy","grid":[0,2,1,0,2,0,2,1,0,2,0,1,2,1,2,0,1,0,0,2,0,0,0,2,2,0,0,0,0,0,0,0,0,0,0,2],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,"eq"],[null,"neq",null,null,null],["neq",null,"neq",null,null]],"vEdges":[[null,null,null,null,"eq",null],[null,null,null,null,null,null],[null,null,null,null,null,"neq"],[null,null,null,null,null,null],[null,null,null,null,null,"neq"]]},{"id":8,"difficulty":"easy","grid":[0,0,0,2,0,0,2,1,0,0,0,1,0,0,0,1,0,2,0,2,0,0,0,0,0,1,0,2,1,2,0,1,0,0,0,0],"hEdges":[[null,null,null,null,null],[null,null,"eq",null,null],[null,null,null,"eq",null],[null,null,null,null,null],[null,null,null,"neq",null],[null,null,null,null,null]],"vEdges":[[null,"neq","neq",null,null,null],[null,null,null,null,null,null],[null,null,"neq",null,null,null],[null,null,null,null,null,"neq"],[null,null,"neq",null,null,null]]},{"id":9,"difficulty":"easy","grid":[0,0,0,2,0,0,0,2,0,0,2,2,0,1,2,1,0,0,0,0,0,2,0,0,1,0,0,0,0,1,0,2,0,2,1,2],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,"neq"],[null,null,null,"neq",null],[null,null,"neq",null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,"neq",null,"neq",null],[null,null,null,null,null,null],[null,null,"neq",null,null,"eq"],[null,null,null,null,null,null]]},{"id":10,"difficulty":"easy","grid":[0,1,0,1,2,0,0,2,0,2,1,0,1,1,0,0,1,0,0,2,0,0,0,0,2,0,0,0,0,1,2,1,0,0,0,0],"hEdges":[[null,null,null,null,null],[null,null,null,"neq",null],[null,null,null,null,null],[null,null,null,null,null],[null,null,"eq",null,null],[null,null,"neq",null,"neq"]],"vEdges":[[null,null,null,null,"neq",null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],["eq",null,null,"neq",null,null]]},{"id":11,"difficulty":"easy","grid":[0,1,0,1,0,1,2,0,0,2,0,0,0,2,0,0,0,1,0,0,1,0,2,0,0,0,0,0,0,0,0,2,2,0,1,0],"hEdges":[[null,"neq",null,null,null],["neq","eq","neq",null,null],[null,null,"neq",null,null],[null,null,null,null,null],["neq",null,null,null,null],[null,null,"neq",null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,null,null],[null,"eq",null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":12,"difficulty":"easy","grid":[0,0,0,0,2,2,0,0,0,2,1,0,2,0,2,0,0,1,0,2,0,0,2,2,0,0,2,0,1,0,0,2,1,1,0,0],"hEdges":[["eq",null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[["eq",null,null,null,"neq",null],[null,"neq",null,null,null,"neq"],[null,null,null,null,null,null],["neq",null,null,"neq",null,null],[null,null,null,null,"neq",null]]},{"id":13,"difficulty":"easy","grid":[0,1,0,2,0,0,1,0,2,0,0,0,0,1,2,0,0,1,0,0,1,0,0,1,0,0,2,2,0,2,0,2,0,0,0,0],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],[null,null,null,"neq",null],["neq",null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,"eq",null,null],[null,null,null,"neq",null,"eq"],[null,null,null,null,"neq",null],[null,null,null,null,null,null]]},{"id":14,"difficulty":"easy","grid":[0,1,2,0,0,2,0,0,0,0,2,0,0,2,0,0,1,2,0,0,0,0,0,0,1,2,0,2,0,0,2,0,2,2,0,1],"hEdges":[[null,"neq",null,"neq","eq"],[null,null,null,"neq",null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,"neq",null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,null],["neq",null,null,null,null,null],["neq",null,null,null,null,null],[null,null,"neq",null,null,null],[null,null,null,null,null,null]]},{"id":15,"difficulty":"easy","grid":[0,2,0,0,0,0,2,0,0,1,0,0,1,0,0,1,0,0,0,2,0,2,0,1,0,0,0,2,0,1,1,0,0,0,1,2],"hEdges":[[null,null,null,null,null],[null,null,null,"eq",null],[null,null,null,null,null],["eq",null,null,"neq","eq"],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,"neq"],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,"neq"]]},{"id":16,"difficulty":"easy","grid":[0,0,0,1,2,0,0,0,0,0,2,0,0,0,0,2,0,0,2,2,0,0,0,0,1,2,1,1,2,2,1,0,0,0,0,0],"hEdges":[["neq",null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,"eq",null],[null,"neq",null,null,null,null],[null,null,"neq",null,null,"neq"],[null,null,null,null,null,null],[null,null,"neq","neq",null,null]]},{"id":17,"difficulty":"easy","grid":[0,0,2,0,0,0,2,2,0,0,0,0,0,2,0,0,0,1,0,1,0,1,0,0,0,0,0,2,1,1,0,1,0,1,0,2],"hEdges":[[null,null,null,"neq",null],[null,null,"neq",null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,"neq",null],[null,null,"eq",null,null,null],[null,null,null,null,null,"neq"],[null,null,null,null,null,null],[null,null,null,null,"eq",null]]},{"id":18,"difficulty":"easy","grid":[1,0,0,2,0,2,0,1,0,1,2,0,0,2,1,2,0,1,1,0,0,0,2,0,2,0,2,0,2,0,0,0,0,0,0,0],"hEdges":[["neq",null,null,"neq","neq"],[null,null,"neq",null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],["neq",null,null,null,null]],"vEdges":[["neq",null,null,null,null,null],[null,null,"neq",null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":19,"difficulty":"easy","grid":[0,2,0,2,0,0,2,1,0,1,1,2,1,1,2,0,0,0,1,2,0,0,2,1,0,0,2,0,0,0,0,0,0,2,0,0],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],[null,null,null,"neq",null],[null,null,null,null,null],[null,"neq",null,null,null],[null,null,null,null,"eq"]],"vEdges":[[null,null,null,null,null,null],["neq",null,"eq",null,null,null],[null,null,null,null,"eq",null],[null,null,null,null,null,null],[null,null,"neq",null,null,"neq"]]},{"id":20,"difficulty":"easy","grid":[0,0,1,0,0,2,0,0,0,1,1,0,2,0,2,1,0,0,2,2,0,2,0,0,0,1,0,1,0,0,1,0,1,0,0,0],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],["eq",null,null,null,null],[null,null,null,null,null],[null,"neq","neq",null,null]],"vEdges":[[null,null,null,null,null,null],[null,"neq",null,null,null,"neq"],[null,null,null,"neq",null,null],[null,null,null,null,"neq",null],["eq","neq",null,null,null,null]]},{"id":21,"difficulty":"easy","grid":[0,0,0,2,2,0,2,0,1,0,1,0,1,0,0,0,0,2,0,2,1,0,0,0,1,0,0,2,0,0,2,1,2,0,0,0],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],[null,"eq",null,null,null],[null,null,"eq","neq",null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,"neq",null,null,null,"neq"],[null,"neq",null,"neq",null,null],[null,null,null,null,null,null],[null,null,null,"neq",null,null],[null,null,null,null,null,null]]},{"id":22,"difficulty":"easy","grid":[2,0,0,0,0,1,1,0,0,0,0,2,0,1,0,2,0,0,0,0,0,1,0,0,1,2,2,0,2,0,2,1,0,0,0,0],"hEdges":[[null,null,null,null,null],[null,null,"neq","eq",null],["neq",null,"neq",null,null],[null,null,"neq","eq",null],[null,null,null,null,null],[null,null,null,null,"neq"]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,"neq",null],[null,null,null,null,null,null],[null,null,null,"neq",null,null]]},{"id":23,"difficulty":"easy","grid":[0,0,2,0,0,2,2,1,0,2,1,1,1,0,1,2,0,0,0,2,0,0,2,0,2,0,0,0,0,0,2,0,0,2,0,0],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],["neq",null,null,null,null],[null,"neq",null,"neq",null],[null,null,null,null,"neq"],[null,null,null,"neq",null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,"eq",null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,"neq",null]]},{"id":24,"difficulty":"easy","grid":[0,0,0,0,0,0,0,0,2,0,0,0,0,2,1,1,2,2,0,0,1,2,1,2,0,0,0,0,0,0,0,1,1,2,0,0],"hEdges":[[null,null,null,null,"eq"],[null,null,null,null,"neq"],[null,null,null,null,null],[null,null,null,null,null],["neq",null,"neq",null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,null,null],["neq","neq",null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":25,"difficulty":"easy","grid":[0,0,2,0,0,0,0,1,0,2,1,0,0,0,0,2,0,0,2,0,2,0,0,2,0,2,1,1,0,0,2,1,0,0,1,1],"hEdges":[[null,null,null,"neq",null],[null,null,null,null,null],["neq",null,null,null,null],[null,null,null,null,null],[null,null,"eq",null,null],[null,null,"eq",null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,"eq",null,null],[null,null,"neq","neq",null,null],[null,null,null,null,null,null],["neq",null,null,null,null,"neq"]]},{"id":26,"difficulty":"easy","grid":[2,1,0,0,0,1,0,0,0,0,1,2,0,0,1,0,0,1,1,1,2,0,0,2,0,0,0,0,0,1,0,0,1,0,1,0],"hEdges":[[null,null,null,null,null],[null,"neq",null,null,"neq"],[null,null,null,null,null],["eq",null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,"eq",null,null],[null,null,null,null,null,null],["eq",null,null,null,"neq",null],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":27,"difficulty":"easy","grid":[0,0,1,0,0,0,0,0,0,0,2,1,0,1,0,2,0,0,0,1,0,1,0,2,0,0,1,1,2,1,2,0,0,2,1,0],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],["eq",null,"eq","neq","neq"],[null,null,null,null,null],[null,null,null,null,"neq"],[null,null,null,null,null]],"vEdges":[[null,null,"eq",null,null,null],[null,null,null,null,"neq",null],[null,null,"eq",null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":28,"difficulty":"easy","grid":[0,2,1,0,1,0,0,1,2,0,0,2,0,0,0,1,2,0,0,0,0,0,0,1,1,0,0,0,2,0,0,1,0,1,0,0],"hEdges":[[null,null,"neq",null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,"neq"],["neq",null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,"neq","neq","eq",null,null],[null,null,null,null,null,"neq"],[null,null,null,null,null,null],[null,"neq","neq",null,null,null]]},{"id":29,"difficulty":"easy","grid":[2,0,0,0,1,0,0,0,0,2,0,0,0,0,2,1,2,1,0,2,1,0,0,1,0,1,0,1,0,0,1,0,1,2,0,1],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[["eq",null,"neq","neq",null,null],[null,null,null,null,null,"neq"],["neq",null,null,null,null,null],[null,null,null,"neq",null,null],[null,null,null,null,null,"neq"]]},{"id":30,"difficulty":"easy","grid":[0,0,2,1,2,0,0,2,1,0,0,2,0,2,0,2,1,0,0,1,0,1,0,0,0,1,2,1,0,0,0,0,1,0,0,2],"hEdges":[[null,null,null,"neq",null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,"neq",null]],"vEdges":[["neq",null,null,null,null,null],[null,null,null,null,"eq",null],["eq","neq",null,null,null,"eq"],[null,null,null,null,null,null],["eq",null,null,null,"neq",null]]},{"id":31,"difficulty":"easy","grid":[1,0,0,1,2,2,0,0,2,0,0,0,0,1,0,0,2,0,0,0,2,0,0,2,0,1,0,0,0,1,0,0,1,0,0,2],"hEdges":[[null,null,null,"neq","eq"],[null,null,null,null,null],[null,null,null,"eq","neq"],[null,"eq",null,"eq",null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,"neq",null],[null,null,null,null,null,null],[null,null,null,null,"neq","neq"],[null,null,null,null,null,null]]},{"id":32,"difficulty":"easy","grid":[1,0,2,0,0,0,0,2,1,0,0,2,0,1,0,2,0,0,0,1,2,1,0,2,1,0,1,2,0,0,0,0,0,0,1,0],"hEdges":[["neq",null,null,"eq",null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,"eq"],[null,null,null,null,"eq",null],[null,"eq",null,null,null,null],[null,null,null,null,null,null],["neq",null,"neq",null,null,"eq"]]},{"id":33,"difficulty":"easy","grid":[0,0,0,0,0,0,0,2,0,0,0,1,2,1,0,2,1,1,0,0,0,1,0,2,0,2,0,0,0,2,0,0,2,0,1,1],"hEdges":[[null,null,null,null,"neq"],[null,null,null,null,null],[null,null,null,"neq",null],[null,null,null,"neq","eq"],[null,null,null,null,null],[null,"neq",null,null,null]],"vEdges":[["neq",null,"eq",null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],["eq",null,null,null,null,null],[null,null,null,"neq",null,null]]},{"id":34,"difficulty":"easy","grid":[0,1,0,0,0,0,0,0,1,2,0,1,1,0,0,0,2,2,2,2,1,2,1,0,1,0,1,0,0,1,0,0,0,0,1,0],"hEdges":[["neq",null,null,null,null],[null,null,null,"eq",null],["eq",null,"neq",null,null],[null,null,null,"neq",null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[["neq",null,null,null,null,"neq"],["eq",null,null,null,null,null],["neq",null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":35,"difficulty":"easy","grid":[2,1,1,0,0,0,0,2,0,0,0,1,2,2,1,0,0,0,0,0,2,0,2,0,1,1,0,2,0,0,0,2,0,0,2,0],"hEdges":[[null,null,null,null,null],[null,"eq",null,"neq",null],["eq",null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],["eq",null,null,null,"neq"]],"vEdges":[[null,null,null,null,"neq",null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,"neq",null],[null,null,"neq",null,null,null]]},{"id":36,"difficulty":"easy","grid":[0,2,2,1,0,0,0,0,0,0,0,1,0,2,0,1,1,2,0,0,2,1,0,0,2,0,0,0,1,0,0,0,0,0,1,0],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],[null,"eq",null,null,null],[null,null,null,null,null],[null,null,null,null,"eq"],[null,"eq",null,null,null]],"vEdges":[[null,null,"neq",null,null,null],[null,null,null,"neq",null,null],[null,null,null,null,null,null],[null,null,null,"neq","neq",null],[null,null,null,null,null,null]]},{"id":37,"difficulty":"easy","grid":[0,1,0,0,0,2,0,0,2,0,0,0,2,0,1,0,2,0,0,1,1,0,0,0,0,0,2,0,2,1,1,0,0,2,0,0],"hEdges":[[null,"neq",null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],["neq",null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,null,null],["eq",null,null,null,null,null],[null,null,null,null,null,"neq"],[null,null,"neq",null,null,"neq"]]},{"id":38,"difficulty":"easy","grid":[0,2,0,0,0,0,0,1,0,1,0,2,0,0,0,0,1,2,2,0,0,0,0,1,0,1,2,2,0,0,1,0,0,0,0,0],"hEdges":[[null,null,null,"neq",null],[null,null,null,null,null],[null,null,null,null,null],[null,"neq","eq",null,null],[null,null,null,null,"neq"],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,"neq",null,null,null],[null,null,null,"eq",null,null]]},{"id":39,"difficulty":"easy","grid":[0,0,0,1,1,0,0,0,1,2,0,0,1,2,0,1,0,0,0,2,0,0,1,2,0,0,1,2,1,2,0,1,0,0,2,0],"hEdges":[["neq",null,null,null,null],[null,null,null,null,null],[null,"eq",null,"neq",null],[null,null,null,"neq",null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,"eq",null],[null,null,null,null,null,null],[null,"neq",null,null,null,null],[null,null,"neq","neq",null,null]]},{"id":40,"difficulty":"easy","grid":[1,0,0,0,0,2,0,2,0,2,0,0,1,0,0,1,0,2,2,0,2,0,0,0,2,1,2,0,2,0,0,0,1,1,0,0],"hEdges":[[null,null,null,null,null],[null,null,"neq","neq",null],["neq",null,"eq",null,null],[null,null,null,null,null],["neq",null,null,null,"neq"],["neq",null,"eq",null,null]],"vEdges":[[null,null,null,null,null,null],["neq",null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":41,"difficulty":"medium","grid":[2,1,0,0,0,0,0,0,2,0,0,0,0,0,0,0,1,0,0,0,0,2,0,0,0,0,1,1,0,0,0,0,0,2,0,0],"hEdges":[[null,null,null,"neq",null],[null,"neq",null,null,null],[null,"neq",null,null,"neq"],[null,null,null,"neq",null],["eq","neq",null,"neq",null],[null,null,null,null,null]],"vEdges":[["neq",null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,"neq"],[null,"neq",null,null,null,"eq"],[null,null,null,null,null,null]]},{"id":42,"difficulty":"medium","grid":[2,0,0,0,0,0,0,0,0,1,0,2,0,1,0,2,0,0,2,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0],"hEdges":[[null,"neq",null,null,null],["neq","neq",null,"neq",null],[null,"neq",null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,"eq","eq",null,null,null],[null,null,null,null,null,null],[null,"neq",null,null,null,null],[null,null,"neq",null,null,null],["eq","eq",null,null,null,null]]},{"id":43,"difficulty":"medium","grid":[1,0,0,2,1,0,0,0,0,0,0,0,2,0,2,0,0,0,1,0,0,2,0,0,1,0,0,0,2,0,0,0,0,0,0,0],"hEdges":[[null,null,"neq",null,null],[null,null,"neq",null,null],["neq",null,null,null,null],["neq",null,null,null,null],[null,"neq",null,null,"eq"],[null,null,"neq",null,null]],"vEdges":[[null,"eq",null,null,null,"neq"],[null,null,null,"neq",null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,"neq"]]},{"id":44,"difficulty":"medium","grid":[0,0,0,0,0,0,0,0,2,2,0,0,1,0,0,0,0,2,0,0,2,0,0,0,0,0,0,0,0,2,0,2,1,0,0,0],"hEdges":[[null,null,null,null,null],[null,null,null,null,"neq"],[null,null,"neq",null,null],[null,null,"neq",null,"neq"],[null,null,null,null,null],["neq",null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,null,null],["neq",null,null,null,"neq",null],[null,"eq",null,null,null,null],[null,null,"neq",null,null,null]]},{"id":45,"difficulty":"medium","grid":[2,0,1,2,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,1,2,0,1,0,0,0,0,0,0,0,2,0,0,0,2,0],"hEdges":[[null,null,null,null,null],[null,null,"neq","neq","eq"],["neq",null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],["eq",null,null,null,null]],"vEdges":[["neq",null,null,null,null,null],["eq",null,null,null,"neq","eq"],[null,null,null,null,"eq",null],[null,null,null,null,"neq",null],["neq",null,null,null,null,null]]},{"id":46,"difficulty":"medium","grid":[0,1,0,2,0,0,0,1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,0,0,1,2,2,0,0,0,2,0],"hEdges":[[null,null,null,"neq",null],[null,null,null,null,"eq"],[null,null,null,null,null],[null,null,null,null,"eq"],[null,null,null,null,null],[null,null,null,null,"neq"]],"vEdges":[[null,null,null,"neq",null,null],[null,null,null,null,null,"neq"],[null,null,null,"neq","neq",null],[null,null,null,"eq",null,null],[null,null,null,"neq",null,null]]},{"id":47,"difficulty":"medium","grid":[1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,2,0,2,0,0,2,0,2,0,1,0,0,2,0,0,0,0,0],"hEdges":[["neq",null,"neq",null,null],[null,null,null,null,null],[null,null,null,null,null],["neq",null,"neq",null,null],[null,null,null,null,null],[null,"neq",null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,"eq",null,null,"neq"],[null,"neq",null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":48,"difficulty":"medium","grid":[0,0,2,0,0,0,0,1,0,0,0,0,0,1,1,0,0,0,1,0,0,0,0,0,2,1,1,0,1,0,0,0,1,0,1,0],"hEdges":[["neq","eq","neq",null,null],[null,null,null,null,null],[null,"eq",null,"neq",null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,"eq"]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],["neq",null,null,null,"neq",null],[null,null,null,null,"eq",null]]},{"id":49,"difficulty":"medium","grid":[0,0,2,0,0,0,0,0,0,2,0,1,0,0,0,0,0,0,1,0,0,1,2,2,0,1,0,0,0,1,1,0,0,0,2,0],"hEdges":[[null,null,null,null,"neq"],["eq","neq",null,null,"eq"],[null,null,"eq",null,null],[null,null,null,null,null],[null,null,null,"neq",null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,"neq","eq"],[null,null,null,null,null,null],["eq",null,null,null,null,null],[null,null,null,null,"neq",null],[null,null,null,null,"neq",null]]},{"id":50,"difficulty":"medium","grid":[1,2,0,0,2,0,2,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,2,0,0,0,0,0,2,0,2,0,0,0],"hEdges":[[null,null,"eq","neq",null],["neq",null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,"neq",null,null],[null,null,null,null,null]],"vEdges":[[null,"neq",null,null,"neq",null],["neq",null,"neq","neq",null,null],[null,null,null,"neq",null,null],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":51,"difficulty":"medium","grid":[0,0,0,0,0,0,0,1,0,0,2,0,0,0,0,0,0,0,0,2,0,1,0,1,0,0,1,0,0,0,0,0,2,0,0,1],"hEdges":[["neq",null,"neq",null,null],["neq",null,"neq",null,null],[null,null,null,null,null],[null,"neq",null,"neq",null],[null,"eq",null,null,"neq"],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,"neq",null,null,null],[null,"neq","neq",null,null,null],[null,null,null,null,null,null],[null,null,"neq",null,null,null]]},{"id":52,"difficulty":"medium","grid":[0,2,0,0,0,0,0,0,0,0,1,0,1,0,0,0,2,0,0,0,0,2,0,0,0,1,0,0,1,2,0,2,2,0,0,0],"hEdges":[["neq",null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,"eq"],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[["neq","neq",null,null,null,"eq"],[null,null,"neq",null,"neq",null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,"neq",null,"neq"]]},{"id":53,"difficulty":"medium","grid":[0,0,0,1,0,0,0,0,0,2,0,1,0,0,0,0,0,1,0,1,0,2,0,0,0,2,0,0,0,0,0,0,0,0,0,1],"hEdges":[[null,null,"neq",null,null],[null,null,null,"neq",null],[null,null,null,"neq",null],["neq",null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,"neq",null,null],["neq",null,null,null,null,"neq"],[null,null,null,null,"neq",null],["neq",null,null,null,null,null]]},{"id":54,"difficulty":"medium","grid":[0,0,1,0,0,1,2,0,1,1,0,1,0,0,0,1,0,0,0,2,1,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0],"hEdges":[[null,"neq",null,null,null],[null,null,null,null,"neq"],[null,null,null,null,null],[null,null,null,null,null],["neq",null,null,null,null],[null,null,null,null,"neq"]],"vEdges":[[null,null,null,null,"eq",null],["eq",null,null,"eq",null,null],[null,null,null,"neq",null,null],[null,null,null,"neq","neq",null],[null,null,null,null,null,null]]},{"id":55,"difficulty":"medium","grid":[0,0,0,0,1,2,0,0,0,2,2,0,0,0,1,2,0,0,0,0,0,0,1,2,0,0,0,2,0,0,1,0,0,0,0,0],"hEdges":[[null,null,null,"eq",null],["neq",null,null,null,null],["neq",null,null,null,null],[null,"neq",null,null,null],[null,null,null,null,null],[null,null,"neq",null,null]],"vEdges":[[null,null,null,null,null,"neq"],["eq",null,null,null,null,null],[null,null,null,null,null,null],["eq",null,null,null,"neq",null],[null,null,null,null,"neq",null]]},{"id":56,"difficulty":"medium","grid":[0,1,0,0,1,1,1,0,0,2,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],["neq",null,"neq",null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,"neq",null]],"vEdges":[[null,null,null,null,null,"neq"],["neq","neq",null,null,null,null],[null,null,"neq","neq",null,"neq"],[null,null,"neq",null,null,null],[null,null,null,null,null,null]]},{"id":57,"difficulty":"medium","grid":[0,0,0,0,0,1,0,1,0,0,0,0,0,0,2,1,0,0,0,1,1,0,0,1,0,0,0,0,1,0,1,0,0,0,0,0],"hEdges":[[null,"neq","eq","neq","neq"],["neq",null,null,null,null],["neq",null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,"eq",null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,"eq"],[null,null,null,"neq",null,null],[null,null,null,null,"eq","eq"]]},{"id":58,"difficulty":"medium","grid":[0,2,0,2,0,0,2,0,1,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,1,0,2],"hEdges":[["neq",null,null,null,null],[null,null,"eq",null,null],[null,null,"eq",null,null],["eq",null,null,null,null],[null,null,"neq",null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,"neq",null,null],[null,null,null,null,null,null],[null,"eq",null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,"neq"]]},{"id":59,"difficulty":"medium","grid":[2,0,0,2,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,1,1,0,0,2,0,2,0,0,0,0,0,2,0,0,0],"hEdges":[[null,null,"neq","eq",null],[null,null,null,null,null],[null,null,null,null,"eq"],[null,null,null,"neq",null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,"neq",null,null,null],["eq",null,null,null,"neq",null],["neq",null,null,"eq",null,null],[null,null,null,null,null,null],["neq","neq",null,null,null,null]]},{"id":60,"difficulty":"medium","grid":[2,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,2,0,0,2,0,1,0,0,0,0,2,2],"hEdges":[["eq",null,null,null,null],["neq",null,null,null,null],[null,null,null,null,null],[null,null,null,null,"neq"],["neq",null,null,null,"eq"],[null,null,null,null,null]],"vEdges":[[null,null,null,"neq",null,null],["eq",null,null,null,null,null],[null,"neq","neq",null,null,null],[null,null,"neq",null,null,"eq"],[null,null,"eq",null,null,null]]},{"id":61,"difficulty":"medium","grid":[0,1,2,2,0,0,2,0,0,0,0,0,0,2,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1,0,1,1,0,0,0,0],"hEdges":[[null,null,null,null,null],["eq",null,null,null,null],[null,null,null,"neq",null],[null,null,null,"neq",null],[null,null,null,"neq",null],[null,null,null,null,null]],"vEdges":[[null,null,"neq",null,null,null],[null,"eq",null,null,"neq","neq"],[null,null,null,null,null,null],[null,null,"neq",null,null,null],[null,"neq",null,null,null,"neq"]]},{"id":62,"difficulty":"medium","grid":[0,0,0,0,0,0,0,0,1,0,2,0,0,0,0,0,0,1,0,0,0,1,1,0,1,0,0,1,0,2,2,2,0,0,0,0],"hEdges":[[null,null,null,null,null],[null,"eq",null,"eq",null],[null,null,null,null,null],["neq",null,null,"eq",null],[null,null,null,null,null],[null,"neq",null,"neq",null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,"neq","eq"],[null,null,null,null,null,null],[null,null,null,null,"neq",null],[null,null,null,null,null,"neq"]]},{"id":63,"difficulty":"medium","grid":[0,0,2,0,1,0,2,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,2,0,0,0,2,0,0,1,0,0,0,2,0],"hEdges":[[null,null,null,null,null],[null,null,"neq",null,null],[null,null,null,null,null],[null,null,"neq","eq",null],["neq",null,null,null,null],[null,"eq",null,"neq","neq"]],"vEdges":[[null,null,null,null,null,null],[null,"eq","eq",null,null,null],[null,null,null,null,"neq",null],[null,null,null,null,null,null],[null,null,"neq",null,"eq",null]]},{"id":64,"difficulty":"medium","grid":[0,0,2,0,1,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,1,1,2,0,1,0,0,0,0,0,0,1,0],"hEdges":[["eq",null,null,null,null],[null,null,null,null,null],["eq",null,null,null,null],["eq",null,null,null,"eq"],[null,null,"eq",null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,"neq",null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,"neq","neq",null,null,null]]},{"id":65,"difficulty":"medium","grid":[0,0,0,0,0,0,2,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,2,1,0,2,0,0,0,0],"hEdges":[["neq",null,null,"neq",null],[null,null,null,null,null],["neq",null,"neq",null,null],[null,null,null,null,"neq"],[null,null,null,null,null],[null,null,null,"neq","neq"]],"vEdges":[[null,null,"eq",null,null,null],[null,null,null,null,null,null],[null,"neq",null,null,null,null],[null,"eq",null,null,null,null],[null,null,"eq",null,null,"neq"]]},{"id":66,"difficulty":"medium","grid":[1,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1,0,0,0,2,2,1,1,0,0,2,0,0],"hEdges":[[null,null,null,"eq","neq"],[null,null,null,null,null],[null,null,"neq","eq","neq"],[null,null,null,null,"neq"],[null,null,null,null,null],[null,"neq",null,null,null]],"vEdges":[["neq","neq",null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,"eq",null,null,null,null],[null,null,null,null,null,null]]},{"id":67,"difficulty":"medium","grid":[0,2,0,0,1,2,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,1,0,0,2,1,0,2,0,1,0,1,2,0,0,0],"hEdges":[[null,null,null,"neq",null],["neq",null,null,null,null],["neq","eq",null,null,null],[null,null,null,"neq",null],[null,null,null,"neq","eq"],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,null],["neq",null,null,null,null,null],[null,"eq",null,"eq",null,null],[null,null,null,null,"neq",null],[null,null,null,null,"neq",null]]},{"id":68,"difficulty":"medium","grid":[0,0,0,0,0,0,2,0,1,0,0,2,0,2,0,0,2,0,0,0,0,0,1,0,0,2,0,1,0,2,0,0,0,0,1,0],"hEdges":[["neq",null,null,null,null],[null,null,null,null,null],[null,"neq",null,"neq",null],[null,null,null,null,null],["neq",null,null,"neq","eq"],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,"neq"],["eq",null,null,null,null,null],[null,"neq",null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":69,"difficulty":"medium","grid":[0,0,0,0,0,2,0,0,1,0,1,1,0,0,0,2,0,0,0,0,1,0,0,0,0,1,0,2,0,0,0,1,0,0,0,0],"hEdges":[[null,"neq",null,null,null],[null,null,null,"neq",null],[null,null,"eq",null,"neq"],[null,null,null,null,null],[null,"neq",null,null,null],["eq",null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,"neq",null,null,null],[null,"neq",null,null,null,"neq"],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":70,"difficulty":"medium","grid":[1,0,1,0,0,2,0,0,2,0,0,0,0,0,1,2,2,0,0,0,2,0,2,0,0,0,0,0,1,0,1,0,0,0,0,0],"hEdges":[[null,null,null,null,"neq"],[null,null,null,null,null],[null,"eq",null,null,null],["neq",null,null,null,null],[null,null,null,"eq","neq"],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,"neq","neq",null,null],[null,null,null,null,null,null],[null,null,null,"eq",null,null],[null,null,null,null,null,null]]},{"id":71,"difficulty":"medium","grid":[1,0,0,0,1,0,2,0,2,0,0,0,1,0,1,2,0,0,2,0,0,0,1,0,0,0,2,0,0,0,0,0,0,0,0,1],"hEdges":[[null,null,null,null,null],["neq",null,null,"eq",null],[null,null,"neq",null,null],[null,null,"neq",null,null],["eq",null,"neq","neq",null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,"eq"],[null,null,null,null,null,null],["neq",null,"eq",null,null,null],[null,null,null,null,"neq",null],[null,"neq",null,null,null,null]]},{"id":72,"difficulty":"medium","grid":[0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,1,1,2,0,0,0,0,0,0,0,1,0,0,2,0,0,0,1,0,0,0],"hEdges":[["neq",null,"neq","neq",null],[null,null,null,null,null],[null,null,null,null,null],[null,"neq","neq",null,null],[null,"eq","neq",null,"neq"],["neq",null,null,null,"neq"]],"vEdges":[[null,null,null,"neq",null,null],[null,null,null,null,null,null],[null,"neq",null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null]]},{"id":73,"difficulty":"medium","grid":[2,0,0,1,2,0,0,0,2,2,0,0,1,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],"hEdges":[[null,"neq","neq",null,null],[null,null,"eq",null,"neq"],["neq",null,null,null,null],[null,null,null,null,null],["eq",null,null,null,null],[null,"neq",null,null,null]],"vEdges":[[null,null,null,"neq",null,null],[null,null,null,null,null,null],[null,"eq",null,null,null,null],["neq",null,"neq",null,null,null],[null,null,null,null,null,null]]},{"id":74,"difficulty":"medium","grid":[0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,2,2,0,2,1,1,0,0,0,0,0,0,0,0,0,0,2,1,2,0,0],"hEdges":[[null,null,null,"neq",null],[null,null,null,null,"neq"],[null,null,"neq",null,null],[null,null,null,null,null],[null,"eq",null,null,null],[null,null,null,null,"neq"]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,"neq"],[null,"neq","neq",null,null,"eq"],[null,null,null,null,"neq","neq"]]},{"id":75,"difficulty":"medium","grid":[0,0,1,0,0,1,0,0,0,0,0,2,0,0,0,0,0,0,1,0,1,0,0,0,1,0,0,0,1,0,0,0,0,2,0,0],"hEdges":[[null,null,null,null,null],["neq","eq",null,null,null],[null,null,null,"eq",null],[null,null,"neq",null,null],[null,null,"neq",null,"neq"],[null,null,null,null,null]],"vEdges":[[null,"neq",null,null,null,null],[null,null,null,"eq",null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,"neq",null,null]]},{"id":76,"difficulty":"medium","grid":[0,0,0,0,0,0,1,2,0,0,0,0,2,0,1,1,0,1,0,0,0,0,0,0,0,0,1,0,2,0,0,0,2,0,0,0],"hEdges":[[null,null,null,null,null],[null,null,null,"neq","neq"],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,"neq"],[null,null,null,null,null]],"vEdges":[["neq",null,null,"eq",null,null],["neq",null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],["eq",null,null,"neq",null,null]]},{"id":77,"difficulty":"medium","grid":[0,0,0,1,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,2,1,0,2,1,1,0,0,0,2,0,0,1,2,0,0,0],"hEdges":[["neq",null,null,null,null],["neq",null,null,"eq",null],[null,null,"neq",null,null],[null,null,"neq",null,null],[null,"neq","neq",null,"eq"],[null,null,null,null,"eq"]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],["neq",null,null,null,null,null]]},{"id":78,"difficulty":"medium","grid":[0,2,0,0,0,0,0,0,0,0,0,1,2,0,0,2,0,0,0,0,0,0,2,0,0,1,0,0,0,0,0,0,2,1,0,0],"hEdges":[[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],["neq",null,null,null,null],[null,null,null,null,"neq"],[null,null,null,"eq",null]],"vEdges":[[null,"neq",null,null,"neq",null],[null,null,null,"neq","neq",null],[null,"neq",null,null,null,null],[null,null,null,null,null,null],[null,"neq","eq",null,null,null]]},{"id":79,"difficulty":"medium","grid":[0,2,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,2,1,0,1,2,0,2,0,0,0,0,0,0,1,0,0,0,2,0],"hEdges":[[null,null,"neq",null,null],[null,null,null,"neq",null],[null,null,null,null,null],[null,null,null,null,"neq"],[null,"neq",null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,"neq","neq"],[null,null,null,null,null,null],[null,null,null,null,null,"neq"],["neq",null,null,null,null,null]]},{"id":80,"difficulty":"medium","grid":[0,0,0,1,1,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,1,1,0,0,0,0,0,0,0,0,1,0,0,0],"hEdges":[[null,"eq",null,null,null],[null,null,null,"neq",null],[null,null,null,null,null],[null,null,null,null,null],["eq",null,null,null,null],[null,null,null,null,"eq"]],"vEdges":[["eq",null,null,null,null,"eq"],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,"neq",null,null,null,null],[null,null,null,"neq",null,null]]},{"id":81,"difficulty":"hard","grid":[0,0,0,0,0,0,0,0,0,2,0,0,0,0,1,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,0,0],"hEdges":[[null,null,null,"neq",null],["eq","neq",null,null,null],[null,null,null,null,"neq"],["eq",null,"neq",null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[["neq",null,null,null,"neq",null],[null,null,null,null,null,null],[null,"neq",null,null,null,null],["neq",null,null,null,null,"neq"],[null,null,null,null,null,null]]},{"id":82,"difficulty":"hard","grid":[0,0,2,0,0,0,0,0,0,0,0,0,2,0,1,0,0,0,0,2,0,0,2,0,0,0,0,0,0,0,0,0,0,1,0,1],"hEdges":[[null,"neq",null,null,"neq"],[null,null,null,null,"neq"],["neq",null,null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,"neq"]],"vEdges":[[null,null,null,null,null,null],["neq",null,"neq","neq","neq",null],["eq",null,null,null,null,"eq"],[null,null,null,null,"neq","neq"],[null,null,null,null,null,"neq"]]},{"id":83,"difficulty":"hard","grid":[0,0,2,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,2,0],"hEdges":[[null,"neq",null,null,null],[null,null,null,null,"neq"],["eq",null,null,"neq",null],[null,null,null,null,null],[null,null,null,null,null],[null,"neq",null,null,null]],"vEdges":[[null,null,null,"neq",null,null],[null,"neq",null,null,null,"neq"],["eq",null,null,null,"neq",null],[null,"neq",null,null,null,"neq"],[null,null,"neq",null,null,"neq"]]},{"id":84,"difficulty":"hard","grid":[0,2,2,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,1,2,0,0,0,0,0,0],"hEdges":[[null,null,"neq",null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,"neq",null],["eq",null,null,null,null],[null,null,null,null,null]],"vEdges":[["neq","neq",null,null,null,null],["neq","neq",null,"eq",null,null],[null,null,"neq","neq","neq","neq"],[null,null,"eq",null,null,null],[null,null,"neq","neq",null,null]]},{"id":85,"difficulty":"hard","grid":[0,0,1,0,0,2,0,2,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,2],"hEdges":[[null,"neq",null,null,null],["neq",null,null,"neq","neq"],[null,null,"neq","neq","neq"],[null,"eq",null,null,"neq"],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[["eq",null,null,null,"eq",null],[null,"neq",null,null,null,null],[null,null,null,"neq",null,null],[null,null,null,null,null,null],[null,null,null,"eq",null,null]]},{"id":86,"difficulty":"hard","grid":[0,0,0,2,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,2,0,1,0,0,0,2,0,0,0,0,0],"hEdges":[[null,null,"neq",null,null],[null,"neq","neq","eq",null],[null,null,"neq",null,"neq"],[null,null,"neq",null,null],[null,"eq",null,null,null],[null,null,null,null,"neq"]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,null,null],["neq",null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,"neq"]]},{"id":87,"difficulty":"hard","grid":[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,2,0,0,0,1,0,0,0,2,0,0,0,0,0,0,0,0],"hEdges":[[null,null,"neq",null,null],[null,null,"eq",null,null],[null,"neq",null,null,null],["eq",null,null,null,"neq"],[null,null,null,null,null],["neq",null,"neq","eq",null]],"vEdges":[[null,null,null,null,null,"neq"],[null,null,null,null,null,"neq"],[null,null,"eq",null,null,null],[null,null,"neq",null,null,"neq"],["neq",null,null,null,"neq",null]]},{"id":88,"difficulty":"hard","grid":[0,0,2,0,0,1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,2,0,1,2,0],"hEdges":[[null,"neq",null,null,null],[null,"neq",null,null,null],[null,"neq","eq","neq",null],["neq",null,null,null,null],["neq","eq",null,null,null],[null,null,null,null,null]],"vEdges":[["eq",null,null,null,null,null],[null,"neq",null,null,"neq",null],["neq",null,null,null,"neq",null],[null,null,null,"neq",null,null],[null,null,null,null,null,"neq"]]},{"id":89,"difficulty":"hard","grid":[1,0,0,2,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,2,0,0,0,0,0,0,0,0,0,0],"hEdges":[[null,"neq","neq",null,null],[null,null,"neq",null,null],[null,null,null,null,null],[null,"neq",null,null,null],["neq",null,null,null,null],[null,"eq","neq",null,null]],"vEdges":[["neq",null,null,null,null,null],["eq",null,null,null,null,null],[null,null,null,"neq",null,"neq"],[null,null,null,null,"neq","neq"],[null,null,null,null,"neq",null]]},{"id":90,"difficulty":"hard","grid":[0,0,0,2,0,0,0,1,0,2,0,0,0,0,0,1,0,0,0,0,0,1,2,0,0,0,0,0,1,0,0,0,0,0,0,0],"hEdges":[[null,null,"neq","eq",null],[null,null,null,null,null],[null,null,"neq",null,null],[null,null,null,null,"neq"],[null,null,"eq","neq",null],[null,"neq",null,"neq",null]],"vEdges":[[null,null,null,null,null,null],[null,null,"eq",null,null,null],["neq",null,null,null,null,"neq"],["neq",null,null,null,"neq",null],["eq",null,null,null,null,null]]},{"id":91,"difficulty":"hard","grid":[0,0,0,2,0,0,1,0,0,0,0,1,0,0,0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,0,1,0,1,0,0,0],"hEdges":[[null,null,null,null,null],[null,null,"neq",null,null],[null,null,null,null,null],["neq",null,null,null,null],[null,null,null,"neq","neq"],[null,null,null,null,null]],"vEdges":[[null,"neq","neq","neq",null,null],[null,null,"neq",null,null,null],[null,null,null,null,"neq",null],[null,"neq",null,null,null,null],[null,null,null,null,null,null]]},{"id":92,"difficulty":"hard","grid":[0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,2,0,0,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,0],"hEdges":[[null,null,null,null,"neq"],[null,null,null,null,"neq"],[null,null,null,"neq",null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,"neq",null,null,null],[null,null,"eq","neq",null,"neq"],[null,"neq",null,null,null,null],[null,null,null,null,null,"neq"],[null,null,"neq",null,null,null]]},{"id":93,"difficulty":"hard","grid":[1,0,0,0,2,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0],"hEdges":[[null,null,null,null,null],[null,null,null,null,"eq"],[null,null,"neq",null,null],[null,null,"neq",null,null],[null,null,null,null,"neq"],["neq",null,null,null,null]],"vEdges":[[null,null,null,null,null,null],[null,null,null,null,"neq",null],[null,"neq",null,"neq","eq","neq"],["neq",null,null,"neq",null,null],["neq",null,null,null,null,null]]},{"id":94,"difficulty":"hard","grid":[0,0,0,0,0,2,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,0,2,0,0,0,0,0,0,1,0,0,0,0],"hEdges":[[null,"eq",null,null,null],[null,"eq",null,"neq",null],[null,null,null,null,null],[null,null,null,"neq",null],["neq",null,null,null,null],[null,null,"neq",null,null]],"vEdges":[[null,null,null,null,"neq",null],[null,null,"neq",null,null,null],[null,null,null,"neq",null,"neq"],[null,null,null,null,"neq",null],[null,null,null,null,null,null]]},{"id":95,"difficulty":"hard","grid":[0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,2,1,0,0,0,0,0,2,0,0,0],"hEdges":[["eq",null,"eq",null,null],["eq",null,null,null,"neq"],[null,null,null,null,null],[null,null,null,null,null],["neq",null,null,null,null],[null,null,null,null,"neq"]],"vEdges":[[null,null,"neq",null,"neq",null],[null,null,null,null,null,null],[null,null,null,null,"eq",null],[null,null,null,null,null,"neq"],["neq",null,null,"neq",null,null]]},{"id":96,"difficulty":"hard","grid":[0,0,0,2,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,2],"hEdges":[[null,null,null,null,null],[null,"eq",null,null,null],["neq","eq",null,null,null],[null,null,"eq",null,null],[null,null,"eq","neq",null],[null,null,null,"neq",null]],"vEdges":[[null,null,null,null,null,null],[null,"neq",null,null,null,"neq"],["neq",null,null,"neq",null,null],[null,"neq",null,null,null,"eq"],[null,null,null,null,"eq","neq"]]},{"id":97,"difficulty":"hard","grid":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,2,2,0],"hEdges":[[null,null,null,null,null],["neq",null,"neq","neq",null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,"neq"],[null,null,null,null,null]],"vEdges":[[null,null,null,null,null,"neq"],["neq",null,null,"neq",null,null],[null,null,"neq",null,null,null],[null,null,"neq",null,null,null],[null,null,null,"neq",null,"neq"]]},{"id":98,"difficulty":"hard","grid":[1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,2,0,0],"hEdges":[[null,null,"eq",null,null],[null,null,null,"neq",null],[null,"neq","neq",null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,null,null,"neq",null],[null,null,null,"eq",null,null],[null,null,null,"neq",null,null],["neq",null,null,"eq","neq","eq"],[null,null,null,"neq","neq","neq"]]},{"id":99,"difficulty":"hard","grid":[2,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,2,1,0,0,0,0,0,0],"hEdges":[[null,null,null,null,null],[null,null,"neq",null,null],[null,null,null,null,null],["neq",null,null,null,null],["neq",null,null,"neq",null],[null,null,null,null,"neq"]],"vEdges":[[null,null,null,null,null,null],[null,"neq",null,null,null,"neq"],[null,"eq","neq",null,"eq",null],["neq",null,null,"eq",null,null],[null,null,null,null,"eq","eq"]]},{"id":100,"difficulty":"hard","grid":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,1,0,2,0,0,0,0,0,0,1,0,0,2,0],"hEdges":[["neq",null,null,null,null],[null,null,null,null,null],["eq",null,null,null,null],[null,null,null,"neq",null],[null,"eq","neq","eq","neq"],[null,null,null,null,"neq"]],"vEdges":[[null,null,"neq","neq",null,null],[null,"neq","neq","neq","neq",null],[null,null,null,null,null,null],[null,"neq",null,null,null,null],[null,null,null,null,null,null]]},{"id":101,"difficulty":"hard","grid":[0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,2,0,2,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],"hEdges":[["neq",null,null,null,null],["eq",null,null,null,null],[null,"neq",null,null,null],[null,null,null,null,null],[null,null,null,null,null],["neq",null,"neq","eq",null]],"vEdges":[[null,"eq",null,null,null,null],[null,null,null,null,null,"neq"],[null,"eq",null,null,null,null],[null,null,null,"neq","neq",null],["eq","neq",null,null,"eq",null]]},{"id":102,"difficulty":"hard","grid":[2,0,0,2,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,1,0,0,0,0,0,0,0,0],"hEdges":[[null,null,"neq",null,"neq"],["neq",null,null,null,null],["neq",null,null,null,null],[null,null,null,null,null],[null,null,null,"neq",null],[null,null,null,null,null]],"vEdges":[[null,"eq","eq",null,null,null],[null,null,"neq","neq","neq","neq"],[null,null,"eq","neq",null,null],[null,"neq",null,null,null,null],[null,null,null,null,null,"eq"]]},{"id":103,"difficulty":"hard","grid":[0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,0,0,0,0,0,0,0,2,0,0,0],"hEdges":[[null,null,null,null,null],[null,"neq",null,null,"neq"],[null,null,"neq","neq","neq"],[null,null,null,"neq",null],[null,"eq",null,null,null],[null,"neq",null,null,null]],"vEdges":[[null,"neq",null,null,null,null],[null,null,null,null,null,null],[null,"eq","neq",null,"neq",null],[null,null,null,null,null,null],[null,null,null,null,"neq",null]]},{"id":104,"difficulty":"hard","grid":[0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0],"hEdges":[["eq",null,null,null,null],[null,null,"eq",null,"eq"],[null,"neq",null,null,null],[null,null,null,null,null],["eq",null,null,null,null],[null,null,null,null,null]],"vEdges":[[null,null,"neq",null,null,null],[null,null,null,null,null,"neq"],[null,"neq",null,null,null,null],[null,null,"eq",null,null,null],[null,null,"neq",null,null,"eq"]]},{"id":105,"difficulty":"hard","grid":[0,0,0,0,0,0,1,0,1,2,0,2,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,2,1,0,0,0],"hEdges":[[null,null,null,"eq",null],[null,null,"neq",null,null],[null,"eq",null,null,null],[null,null,null,null,null],[null,null,null,null,null],[null,"neq",null,null,"neq"]],"vEdges":[[null,"neq","neq",null,null,"eq"],[null,null,null,null,null,null],["neq",null,null,null,"neq",null],[null,"neq",null,null,null,null],["neq",null,null,"neq","eq",null]]},{"id":106,"difficulty":"hard","grid":[0,0,0,1,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,2,0,0,0,0,2,0,0,2,0,0],"hEdges":[[null,null,null,null,null],["eq","neq",null,null,null],[null,null,null,"eq",null],[null,null,null,null,null],[null,null,null,null,null],[null,null,"neq",null,null]],"vEdges":[[null,null,null,"neq",null,null],["neq",null,null,null,null,null],[null,null,"neq","neq",null,null],[null,null,"eq","eq","neq",null],[null,null,null,null,null,null]]},{"id":107,"difficulty":"hard","grid":[0,0,0,1,2,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],"hEdges":[["eq",null,null,null,null],[null,null,null,null,null],["eq","neq",null,null,null],[null,null,"neq",null,"neq"],[null,null,"eq",null,null],[null,null,null,null,null]],"vEdges":[[null,null,"neq","eq",null,null],[null,null,null,null,null,null],[null,"eq",null,null,null,"neq"],[null,"neq",null,null,null,null],["neq",null,null,"neq",null,"neq"]]},{"id":108,"difficulty":"hard","grid":[0,0,0,0,0,0,0,0,0,1,0,0,0,2,0,0,0,0,0,0,2,0,0,0,0,0,2,1,0,0,1,0,0,0,0,0],"hEdges":[[null,"neq","neq",null,null],[null,null,null,null,null],[null,null,null,null,null],[null,null,null,"eq",null],[null,null,"neq",null,null],["neq",null,null,null,"neq"]],"vEdges":[[null,null,null,null,"eq","neq"],[null,null,null,null,null,null],[null,null,null,null,null,null],[null,null,null,null,null,null],["eq",null,null,null,null,"neq"]]},{"id":109,"difficulty":"hard","grid":[1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1,1,0,1,0,0,0,0,0,0,0,0,0],"hEdges":[[null,null,null,null,null],[null,null,"neq",null,"eq"],[null,null,null,"neq",null],[null,null,null,"neq",null],[null,null,null,null,null],[null,null,null,"eq",null]],"vEdges":[[null,null,null,null,null,null],["eq",null,"eq","eq",null,"neq"],[null,null,null,null,null,null],[null,null,null,"neq",null,null],[null,null,null,null,null,"neq"]]},{"id":110,"difficulty":"hard","grid":[0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0],"hEdges":[[null,null,"neq",null,"eq"],[null,null,null,null,null],[null,null,null,"eq",null],[null,null,"eq",null,null],[null,null,null,null,null],["eq","neq",null,null,"eq"]],"vEdges":[[null,"eq",null,null,"neq",null],[null,null,null,null,"neq",null],[null,null,"neq",null,null,null],[null,"neq",null,null,null,null],[null,null,null,null,null,null]]}];
 
+    const HISTORY_CAP = 20;
+    const DIFFS = ["easy", "medium", "hard"];
+    const DIFF_TARGETS = {
+      easy: { givenMin: 10, givenMax: 16, signMin: 4, signMax: 8 },
+      medium: { givenMin: 6, givenMax: 10, signMin: 8, signMax: 12 },
+      hard: { givenMin: 3, givenMax: 6, signMin: 10, signMax: 16 }
+    };
+
     const boardEl = document.getElementById("board");
     const statusEl = document.getElementById("status");
+    const modeLabelEl = document.getElementById("modeLabel");
     const levelNumEl = document.getElementById("levelNum");
     const diffEl = document.getElementById("diff");
+    const timerEl = document.getElementById("timer");
     const prevBtn = document.getElementById("prevBtn");
     const nextBtn = document.getElementById("nextBtn");
     const resetBtn = document.getElementById("resetBtn");
@@ -556,18 +602,31 @@
     const statsSheet = document.getElementById("statsSheet");
     const winSheet = document.getElementById("winSheet");
     const levelGrid = document.getElementById("levelGrid");
+    const generatedCopy = document.getElementById("generatedCopy");
+    const newPuzzleBtn = document.getElementById("newPuzzleBtn");
     const winCopy = document.getElementById("winCopy");
     const winNextBtn = document.getElementById("winNextBtn");
     const burstEl = document.getElementById("burst");
     const autoWarningsEl = document.getElementById("autoWarnings");
 
+    let playMode = "classic";
     let levelIndex = 0;
+    let generatedPuzzle = null;
+    let generatedHistory = [];
+    let generatedIndex = 0;
+    let generatedDifficulty = "easy";
+    let pickerMode = "classic";
+    let pickerDiff = "easy";
     let play = [];
     let errors = new Set();
     let won = false;
-    let pickerDiff = "easy";
+    let generating = false;
     let autoWarnings = loadProgress().preferences?.autoWarnings !== false;
     let lastMistakeSignature = "";
+    let timerElapsedMs = 0;
+    let timerRunningSince = null;
+    let timerTick = null;
+    let timerBoardKey = "";
 
     function idx(r, c) { return r * N + c; }
 
@@ -584,19 +643,358 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patch }));
     }
 
+    function clonePuzzle(p) {
+      return {
+        difficulty: p.difficulty,
+        grid: p.grid.slice(),
+        hEdges: p.hEdges.map((row) => row.slice()),
+        vEdges: p.vEdges.map((row) => row.slice())
+      };
+    }
+
+    function puzzleHash(p) {
+      return JSON.stringify({ g: p.grid, h: p.hEdges, v: p.vEdges });
+    }
+
+    function emptyEdgeMaps() {
+      return {
+        hEdges: Array.from({ length: N }, () => Array(N - 1).fill(null)),
+        vEdges: Array.from({ length: N - 1 }, () => Array(N).fill(null))
+      };
+    }
+
+    function applySigns(signs) {
+      const edges = emptyEdgeMaps();
+      for (const s of signs) {
+        if (s.d === "h") edges.hEdges[s.r][s.c] = s.t;
+        else edges.vEdges[s.r][s.c] = s.t;
+      }
+      return edges;
+    }
+
+    function shuffle(list) {
+      const a = list.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = a[i];
+        a[i] = a[j];
+        a[j] = tmp;
+      }
+      return a;
+    }
+
+    function sample(list, n) {
+      return shuffle(list).slice(0, Math.max(0, Math.min(n, list.length)));
+    }
+
+    function lineLegal(vals) {
+      for (let i = 0; i < N - 2; i++) {
+        const a = vals[i], b = vals[i + 1], c = vals[i + 2];
+        if (a && a === b && b === c) return false;
+      }
+      let s = 0, m = 0;
+      for (const v of vals) {
+        if (v === SUN) s++;
+        else if (v === MOON) m++;
+      }
+      if (s > 3 || m > 3) return false;
+      if (vals.every(Boolean) && (s !== 3 || m !== 3)) return false;
+      return true;
+    }
+
+    function canPlace(board, i, val, hEdges, vEdges) {
+      const r = Math.floor(i / N);
+      const c = i % N;
+      const row = [];
+      const col = [];
+      for (let k = 0; k < N; k++) {
+        row.push(k === c ? val : board[idx(r, k)]);
+        col.push(k === r ? val : board[idx(k, c)]);
+      }
+      if (!lineLegal(row) || !lineLegal(col)) return false;
+      if (c > 0) {
+        const e = hEdges[r][c - 1];
+        const left = board[idx(r, c - 1)];
+        if (e && left && ((e === "eq" && left !== val) || (e === "neq" && left === val))) return false;
+      }
+      if (c < N - 1) {
+        const e = hEdges[r][c];
+        const right = board[idx(r, c + 1)];
+        if (e && right && ((e === "eq" && right !== val) || (e === "neq" && right === val))) return false;
+      }
+      if (r > 0) {
+        const e = vEdges[r - 1][c];
+        const up = board[idx(r - 1, c)];
+        if (e && up && ((e === "eq" && up !== val) || (e === "neq" && up === val))) return false;
+      }
+      if (r < N - 1) {
+        const e = vEdges[r][c];
+        const down = board[idx(r + 1, c)];
+        if (e && down && ((e === "eq" && down !== val) || (e === "neq" && down === val))) return false;
+      }
+      return true;
+    }
+
+    function fillComplete() {
+      const empty = emptyEdgeMaps();
+      const board = Array(N * N).fill(EMPTY);
+      const order = shuffle([...Array(N * N).keys()]);
+      function dfs(pos) {
+        if (pos === order.length) return true;
+        const i = order[pos];
+        for (const val of shuffle([SUN, MOON])) {
+          if (!canPlace(board, i, val, empty.hEdges, empty.vEdges)) continue;
+          board[i] = val;
+          if (dfs(pos + 1)) return true;
+          board[i] = EMPTY;
+        }
+        return false;
+      }
+      return dfs(0) ? board : null;
+    }
+
+    function countSolutions(grid, hEdges, vEdges, limit) {
+      const board = grid.slice();
+      let found = 0;
+      function dfs() {
+        if (found >= limit) return;
+        let i = -1;
+        for (let k = 0; k < board.length; k++) {
+          if (!board[k]) { i = k; break; }
+        }
+        if (i < 0) {
+          found += 1;
+          return;
+        }
+        for (const val of [SUN, MOON]) {
+          if (!canPlace(board, i, val, hEdges, vEdges)) continue;
+          board[i] = val;
+          dfs();
+          board[i] = EMPTY;
+          if (found >= limit) return;
+        }
+      }
+      dfs();
+      return found;
+    }
+
+    function collectSigns(solution) {
+      const signs = [];
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N - 1; c++) {
+          const a = solution[idx(r, c)];
+          const b = solution[idx(r, c + 1)];
+          signs.push({ d: "h", r, c, t: a === b ? "eq" : "neq" });
+        }
+      }
+      for (let r = 0; r < N - 1; r++) {
+        for (let c = 0; c < N; c++) {
+          const a = solution[idx(r, c)];
+          const b = solution[idx(r + 1, c)];
+          signs.push({ d: "v", r, c, t: a === b ? "eq" : "neq" });
+        }
+      }
+      return signs;
+    }
+
+    function uniqueWith(grid, signs) {
+      const edges = applySigns(signs);
+      return countSolutions(grid, edges.hEdges, edges.vEdges, 2) === 1;
+    }
+
+    function generatePuzzle(difficulty, avoidHash) {
+      const t = DIFF_TARGETS[difficulty] || DIFF_TARGETS.easy;
+      for (let attempt = 0; attempt < 24; attempt++) {
+        const givenMax = Math.min(N * N, t.givenMax + (attempt > 10 ? 4 : 0));
+        const givenMin = Math.max(2, t.givenMin - (attempt > 16 ? 2 : 0));
+        const signMax = Math.min(60, t.signMax + (attempt > 8 ? 4 : 0));
+        const signMin = Math.max(3, t.signMin - (attempt > 14 ? 2 : 0));
+        const solution = fillComplete();
+        if (!solution) continue;
+        const allSigns = collectSigns(solution);
+        let signs = sample(allSigns, signMax);
+        const grid = solution.slice();
+        if (!uniqueWith(grid, signs)) {
+          signs = allSigns.slice();
+          if (!uniqueWith(grid, signs)) continue;
+        }
+        const givenOrder = shuffle([...Array(N * N).keys()]);
+        let givenCount = N * N;
+        for (const i of givenOrder) {
+          if (givenCount <= givenMin) break;
+          if (givenCount <= givenMax && Math.random() < 0.35 && difficulty === "easy") continue;
+          const keep = grid[i];
+          grid[i] = EMPTY;
+          if (uniqueWith(grid, signs)) givenCount -= 1;
+          else grid[i] = keep;
+        }
+        const signOrder = shuffle(signs.map((_, i) => i));
+        const kept = signs.slice();
+        for (const si of signOrder) {
+          if (kept.filter(Boolean).length <= signMin) break;
+          const hold = kept[si];
+          kept[si] = null;
+          const nextSigns = kept.filter(Boolean);
+          if (uniqueWith(grid, nextSigns)) signs = nextSigns;
+          else kept[si] = hold;
+        }
+        signs = kept.filter(Boolean);
+        if (signs.length > signMax) signs = sample(signs, signMax);
+        if (!uniqueWith(grid, signs)) continue;
+        const edges = applySigns(signs);
+        const puzzle = {
+          difficulty,
+          grid,
+          hEdges: edges.hEdges,
+          vEdges: edges.vEdges
+        };
+        if (avoidHash && puzzleHash(puzzle) === avoidHash) continue;
+        if (countSolutions(puzzle.grid, puzzle.hEdges, puzzle.vEdges, 2) !== 1) continue;
+        return puzzle;
+      }
+      return null;
+    }
+
+    function formatTime(ms) {
+      if (!Number.isFinite(ms) || ms < 0) return "—";
+      const total = Math.floor(ms / 1000);
+      const h = Math.floor(total / 3600);
+      const m = Math.floor((total % 3600) / 60);
+      const s = total % 60;
+      if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      return `${m}:${String(s).padStart(2, "0")}`;
+    }
+
+    function currentElapsed() {
+      if (!timerRunningSince) return timerElapsedMs;
+      return timerElapsedMs + Math.max(0, Date.now() - timerRunningSince);
+    }
+
+    function renderTimer() {
+      timerEl.textContent = formatTime(currentElapsed());
+    }
+
+    function stopTimerTick() {
+      if (timerTick) {
+        clearInterval(timerTick);
+        timerTick = null;
+      }
+    }
+
+    function startTimerTick() {
+      stopTimerTick();
+      renderTimer();
+      if (won || generating) return;
+      timerTick = setInterval(renderTimer, 250);
+    }
+
+    function persistTimer() {
+      const elapsed = currentElapsed();
+      const running = !won && !generating && !!timerRunningSince;
+      if (running) {
+        timerElapsedMs = elapsed;
+        timerRunningSince = Date.now();
+      }
+      saveProgress({
+        timerElapsedMs: elapsed,
+        timerRunningSince: running ? timerRunningSince : null,
+        timerBoardKey,
+        playSnapshot: play.slice(),
+        boardWon: won
+      });
+    }
+
+    function beginTimer(reset) {
+      if (reset) {
+        timerElapsedMs = 0;
+        timerRunningSince = Date.now();
+        timerBoardKey = puzzleHash(currentLevel());
+      }
+      if (!won) timerRunningSince = Date.now();
+      startTimerTick();
+      persistTimer();
+    }
+
+    function freezeTimer() {
+      if (timerRunningSince) {
+        timerElapsedMs += Math.max(0, Date.now() - timerRunningSince);
+        timerRunningSince = null;
+      }
+      stopTimerTick();
+      renderTimer();
+    }
+
+    function resumeTimerFromSave(key) {
+      const cur = loadProgress();
+      if (cur.timerBoardKey !== key) {
+        beginTimer(true);
+        return false;
+      }
+      timerBoardKey = key;
+      timerElapsedMs = Number(cur.timerElapsedMs) || 0;
+      const runningSince = Number(cur.timerRunningSince) || 0;
+      const snap = Array.isArray(cur.playSnapshot) ? cur.playSnapshot : null;
+      const wasWon = !!cur.boardWon;
+      if (snap && snap.length === N * N) play = snap.slice();
+      won = wasWon;
+      if (won) {
+        timerRunningSince = null;
+        stopTimerTick();
+        renderTimer();
+      } else {
+        if (runningSince) timerElapsedMs += Math.max(0, Date.now() - runningSince);
+        timerRunningSince = Date.now();
+        startTimerTick();
+      }
+      persistTimer();
+      return true;
+    }
+
     function getStats() {
       const stats = loadProgress().stats || {};
       return {
         wins: Number(stats.wins) || 0,
         checks: Number(stats.checks) || 0,
         mistakes: Number(stats.mistakes) || 0,
-        resets: Number(stats.resets) || 0
+        resets: Number(stats.resets) || 0,
+        bestMs: Number(stats.bestMs) || 0,
+        lastMs: Number(stats.lastMs) || 0,
+        totalSolveMs: Number(stats.totalSolveMs) || 0,
+        timedWins: Number(stats.timedWins) || 0,
+        classicTimes: stats.classicTimes && typeof stats.classicTimes === "object" ? stats.classicTimes : {},
+        generatedTimes: stats.generatedTimes && typeof stats.generatedTimes === "object" ? stats.generatedTimes : {}
       };
     }
 
     function incrementStat(key) {
       const stats = getStats();
       stats[key] += 1;
+      saveProgress({ stats });
+      renderStats();
+    }
+
+    function recordSolveTime(ms) {
+      const stats = getStats();
+      stats.lastMs = ms;
+      stats.totalSolveMs += ms;
+      stats.timedWins += 1;
+      if (!stats.bestMs || ms < stats.bestMs) stats.bestMs = ms;
+      const lv = currentLevel();
+      if (playMode === "classic" && lv.id) {
+        const prev = stats.classicTimes[lv.id] || {};
+        stats.classicTimes[lv.id] = {
+          lastMs: ms,
+          bestMs: prev.bestMs && prev.bestMs < ms ? prev.bestMs : ms
+        };
+      }
+      if (playMode === "generated") {
+        const bucket = stats.generatedTimes[lv.difficulty] || { bestMs: 0, lastMs: 0, totalSolveMs: 0, wins: 0 };
+        bucket.lastMs = ms;
+        bucket.totalSolveMs += ms;
+        bucket.wins += 1;
+        if (!bucket.bestMs || ms < bucket.bestMs) bucket.bestMs = ms;
+        stats.generatedTimes[lv.difficulty] = bucket;
+      }
       saveProgress({ stats });
       renderStats();
     }
@@ -608,6 +1006,11 @@
       document.getElementById("statChecks").textContent = String(stats.checks);
       document.getElementById("statMistakes").textContent = String(stats.mistakes);
       document.getElementById("statResets").textContent = String(stats.resets);
+      document.getElementById("statLastTime").textContent = stats.lastMs ? formatTime(stats.lastMs) : "—";
+      document.getElementById("statBestTime").textContent = stats.bestMs ? formatTime(stats.bestMs) : "—";
+      document.getElementById("statAvgTime").textContent = stats.timedWins
+        ? formatTime(stats.totalSolveMs / stats.timedWins)
+        : "—";
       autoWarningsEl.checked = autoWarnings;
     }
 
@@ -616,7 +1019,7 @@
         lastMistakeSignature = "";
         return;
       }
-      const signature = `${levelIndex}:${play.join("")}`;
+      const signature = `${playMode}:${puzzleHash(currentLevel())}:${play.join("")}`;
       if (signature === lastMistakeSignature) return;
       lastMistakeSignature = signature;
       incrementStat("mistakes");
@@ -628,6 +1031,7 @@
     }
 
     function markCompleted(id) {
+      if (playMode !== "classic" || !id) return;
       const cur = loadProgress();
       const completed = Array.isArray(cur.completed) ? cur.completed.slice() : [];
       if (!completed.includes(id)) completed.push(id);
@@ -635,12 +1039,32 @@
     }
 
     function currentLevel() {
+      if (playMode === "generated") return generatedPuzzle;
       return LEVELS[levelIndex];
     }
 
     function setStatus(text, kind) {
       statusEl.textContent = text;
       statusEl.className = "status" + (kind ? " " + kind : "");
+    }
+
+    function setBusy(on) {
+      generating = on;
+      prevBtn.disabled = on || (playMode === "classic" ? levelIndex === 0 : generatedIndex <= 0);
+      nextBtn.disabled = on || (playMode === "classic" && levelIndex === LEVELS.length - 1);
+      resetBtn.disabled = on;
+      checkBtn.disabled = on;
+      newPuzzleBtn.disabled = on;
+    }
+
+    function persistGenerated() {
+      saveProgress({
+        playMode,
+        generatedDifficulty,
+        generatedPuzzle: generatedPuzzle ? clonePuzzle(generatedPuzzle) : null,
+        generatedHistory: generatedHistory.map(clonePuzzle),
+        generatedIndex
+      });
     }
 
     function openSheet(el) {
@@ -652,23 +1076,32 @@
     }
 
     function renderPicker() {
-      const done = completedSet();
+      const generated = pickerMode === "generated";
+      generatedCopy.hidden = !generated;
+      newPuzzleBtn.hidden = !generated;
+      levelGrid.hidden = generated;
+      document.getElementById("pickerTitle").textContent = generated ? "Generated puzzles" : "Choose a level";
+      document.querySelectorAll("#modeChips .chip").forEach((chip) => {
+        chip.classList.toggle("on", chip.dataset.mode === pickerMode);
+      });
+      document.querySelectorAll("#diffChips .chip").forEach((chip) => {
+        chip.classList.toggle("on", chip.dataset.diff === pickerDiff);
+      });
       levelGrid.innerHTML = "";
+      if (generated) return;
+      const done = completedSet();
       LEVELS.forEach((lv, i) => {
         if (lv.difficulty !== pickerDiff) return;
         const b = document.createElement("button");
         b.type = "button";
         b.textContent = String(lv.id);
-        if (i === levelIndex) b.classList.add("current");
+        if (playMode === "classic" && i === levelIndex) b.classList.add("current");
         if (done.has(lv.id)) b.classList.add("done");
         b.addEventListener("click", () => {
           closeSheet(pickerSheet);
-          loadLevel(i);
+          loadClassic(i);
         });
         levelGrid.appendChild(b);
-      });
-      document.querySelectorAll(".chip").forEach((chip) => {
-        chip.classList.toggle("on", chip.dataset.diff === pickerDiff);
       });
     }
 
@@ -679,6 +1112,7 @@
     function renderBoard(popIndex) {
       const lv = currentLevel();
       boardEl.innerHTML = "";
+      if (!lv) return;
       const frag = document.createDocumentFragment();
 
       for (let r = 0; r < N; r++) {
@@ -698,7 +1132,7 @@
             btn.style.animationDelay = (r + c) * 40 + "ms";
           }
           if (i === popIndex && play[i]) btn.classList.add("pop");
-          btn.disabled = given;
+          btn.disabled = given || generating;
           const label = play[i] === SUN ? "sun" : play[i] === MOON ? "moon" : "empty";
           btn.setAttribute("aria-label", `Row ${r + 1}, column ${c + 1}, ${label}${given ? ", given" : ""}`);
           btn.addEventListener("click", () => cycle(i));
@@ -734,32 +1168,114 @@
 
     function updateChrome() {
       const lv = currentLevel();
-      levelNumEl.textContent = String(lv.id);
-      diffEl.textContent = lv.difficulty;
-      diffEl.className = "diff " + lv.difficulty;
-      prevBtn.disabled = levelIndex === 0;
-      nextBtn.disabled = levelIndex === LEVELS.length - 1;
+      const generated = playMode === "generated";
+      modeLabelEl.textContent = generated ? "Generated" : "Level";
+      if (generated) {
+        levelNumEl.hidden = true;
+        levelNumEl.textContent = "";
+      } else {
+        levelNumEl.hidden = false;
+        levelNumEl.textContent = String(lv.id);
+      }
+      diffEl.textContent = lv ? lv.difficulty : pickerDiff;
+      diffEl.className = "diff " + (lv ? lv.difficulty : pickerDiff);
+      prevBtn.disabled = generating || (generated ? generatedIndex <= 0 : levelIndex === 0);
+      nextBtn.disabled = generating || (!generated && levelIndex === LEVELS.length - 1);
     }
 
-    function loadLevel(i, opts) {
-      levelIndex = Math.max(0, Math.min(LEVELS.length - 1, i));
+    function presentBoard(opts) {
       const lv = currentLevel();
-      play = lv.grid.slice();
+      if (!lv) return;
+      const key = puzzleHash(lv);
       errors = new Set();
-      won = false;
       lastMistakeSignature = "";
       closeSheet(winSheet);
-      saveProgress({ lastPlayed: levelIndex });
+      if (opts && opts.keepTimer) {
+        play = lv.grid.slice();
+        won = false;
+        if (!timerRunningSince) timerRunningSince = Date.now();
+        startTimerTick();
+        persistTimer();
+      } else if (opts && opts.restore) {
+        play = lv.grid.slice();
+        won = false;
+        const restored = resumeTimerFromSave(key);
+        if (!restored) play = lv.grid.slice();
+      } else {
+        play = lv.grid.slice();
+        won = false;
+        beginTimer(true);
+      }
       updateChrome();
       renderBoard();
-      if (!opts || !opts.silentStatus) {
+      if (won) {
+        setStatus("Solved.", "good");
+      } else if (!opts || !opts.silentStatus) {
         setStatus("Fill the board: 3 suns and 3 moons in every row and column.");
       }
     }
 
+    function loadClassic(i, opts) {
+      playMode = "classic";
+      pickerMode = "classic";
+      levelIndex = Math.max(0, Math.min(LEVELS.length - 1, i));
+      pickerDiff = LEVELS[levelIndex].difficulty;
+      saveProgress({ playMode, lastPlayed: levelIndex });
+      presentBoard(opts);
+    }
+
+    function loadGeneratedAt(i, opts) {
+      if (!generatedHistory.length) return;
+      generatedIndex = Math.max(0, Math.min(generatedHistory.length - 1, i));
+      generatedPuzzle = clonePuzzle(generatedHistory[generatedIndex]);
+      playMode = "generated";
+      pickerMode = "generated";
+      persistGenerated();
+      presentBoard(opts);
+    }
+
+    async function requestGenerated(opts) {
+      if (generating) return;
+      const difficulty = generatedDifficulty;
+      const avoid = generatedPuzzle ? puzzleHash(generatedPuzzle) : "";
+      setBusy(true);
+      setStatus("Building a puzzle…");
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      const puzzle = generatePuzzle(difficulty, avoid);
+      setBusy(false);
+      if (!puzzle) {
+        setStatus("Could not build a unique puzzle. Try again.", "bad");
+        updateChrome();
+        return;
+      }
+      const drop = generatedHistory.slice(0, generatedIndex + 1);
+      drop.push(clonePuzzle(puzzle));
+      if (drop.length > HISTORY_CAP) drop.shift();
+      generatedHistory = drop;
+      generatedIndex = generatedHistory.length - 1;
+      generatedPuzzle = clonePuzzle(puzzle);
+      playMode = "generated";
+      pickerMode = "generated";
+      persistGenerated();
+      presentBoard(opts);
+    }
+
+    async function enterGenerated(opts) {
+      playMode = "generated";
+      pickerMode = "generated";
+      if (generatedPuzzle) {
+        persistGenerated();
+        presentBoard(opts && opts.restore ? { restore: true } : undefined);
+        return;
+      }
+      await requestGenerated(opts);
+    }
+
     function cycle(i) {
-      if (currentLevel().grid[i] !== EMPTY || won) return;
+      const lv = currentLevel();
+      if (!lv || lv.grid[i] !== EMPTY || won || generating) return;
       play[i] = play[i] === EMPTY ? SUN : play[i] === SUN ? MOON : EMPTY;
+      persistTimer();
       const conflicts = findConflicts();
       if (play.every(Boolean) && conflicts.size === 0) {
         onWin();
@@ -779,6 +1295,7 @@
     function findConflicts() {
       const bad = new Set();
       const lv = currentLevel();
+      if (!lv) return bad;
 
       function markLine(coords, vals) {
         for (let i = 0; i < N - 2; i++) {
@@ -860,22 +1377,29 @@
 
     function onWin() {
       if (won) return;
+      freezeTimer();
       won = true;
+      persistTimer();
       errors = new Set();
+      const solveMs = timerElapsedMs;
       markCompleted(currentLevel().id);
       incrementStat("wins");
+      recordSolveTime(solveMs);
       renderBoard();
-      const more = levelIndex < LEVELS.length - 1;
-      const msg = more ? "Solved. Next level when you are ready." : "Solved. That was the last level.";
+      const more = playMode === "generated" || levelIndex < LEVELS.length - 1;
+      const timeBit = formatTime(solveMs);
+      const msg = playMode === "generated"
+        ? `Solved in ${timeBit}. Next puzzle when you are ready.`
+        : (more ? `Solved in ${timeBit}. Next level when you are ready.` : `Solved in ${timeBit}. That was the last level.`);
       setStatus(msg, "good");
-      winCopy.textContent = more ? "The board is perfect." : "That was the last level.";
+      winCopy.textContent = `The board is perfect. ${timeBit}.`;
       winNextBtn.disabled = !more;
       spawnBurst();
       openSheet(winSheet);
     }
 
     function check() {
-      if (won) return;
+      if (won || generating) return;
       incrementStat("checks");
       errors = findConflicts();
       const empty = play.some((v) => !v);
@@ -894,15 +1418,32 @@
       onWin();
     }
 
-    prevBtn.addEventListener("click", () => loadLevel(levelIndex - 1));
-    nextBtn.addEventListener("click", () => loadLevel(levelIndex + 1));
+    prevBtn.addEventListener("click", () => {
+      if (generating) return;
+      if (playMode === "generated") loadGeneratedAt(generatedIndex - 1);
+      else loadClassic(levelIndex - 1);
+    });
+    nextBtn.addEventListener("click", () => {
+      if (generating) return;
+      if (playMode === "generated") {
+        if (generatedIndex < generatedHistory.length - 1) loadGeneratedAt(generatedIndex + 1);
+        else requestGenerated();
+      } else loadClassic(levelIndex + 1);
+    });
     resetBtn.addEventListener("click", () => {
+      if (generating) return;
       incrementStat("resets");
-      loadLevel(levelIndex);
+      presentBoard({ keepTimer: true, silentStatus: true });
+      setStatus("Board reset. The timer is still running.");
     });
     checkBtn.addEventListener("click", check);
+    newPuzzleBtn.addEventListener("click", () => {
+      closeSheet(pickerSheet);
+      requestGenerated();
+    });
     document.getElementById("openPicker").addEventListener("click", () => {
-      pickerDiff = currentLevel().difficulty;
+      pickerMode = playMode;
+      pickerDiff = playMode === "generated" ? generatedDifficulty : currentLevel().difficulty;
       renderPicker();
       openSheet(pickerSheet);
     });
@@ -933,10 +1474,30 @@
       renderBoard();
     });
     document.getElementById("stayBtn").addEventListener("click", () => closeSheet(winSheet));
-    winNextBtn.addEventListener("click", () => loadLevel(levelIndex + 1));
-    document.querySelectorAll(".chip").forEach((chip) => {
+    winNextBtn.addEventListener("click", () => {
+      if (playMode === "generated") requestGenerated();
+      else loadClassic(levelIndex + 1);
+    });
+    document.querySelectorAll("#modeChips .chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        pickerMode = chip.dataset.mode;
+        if (pickerMode === "generated") pickerDiff = generatedDifficulty;
+        else pickerDiff = LEVELS[levelIndex].difficulty;
+        renderPicker();
+        if (pickerMode !== playMode) {
+          closeSheet(pickerSheet);
+          if (pickerMode === "generated") enterGenerated({ restore: true });
+          else loadClassic(levelIndex, { restore: true });
+        }
+      });
+    });
+    document.querySelectorAll("#diffChips .chip").forEach((chip) => {
       chip.addEventListener("click", () => {
         pickerDiff = chip.dataset.diff;
+        if (pickerMode === "generated") {
+          generatedDifficulty = pickerDiff;
+          persistGenerated();
+        }
         renderPicker();
       });
     });
@@ -945,11 +1506,41 @@
         if (e.target === sheet) closeSheet(sheet);
       });
     });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) persistTimer();
+      else if (!won && playMode) {
+        const cur = loadProgress();
+        if (cur.timerBoardKey === timerBoardKey && cur.timerRunningSince) {
+          timerElapsedMs = Number(cur.timerElapsedMs) || timerElapsedMs;
+          timerElapsedMs += Math.max(0, Date.now() - Number(cur.timerRunningSince));
+          timerRunningSince = Date.now();
+        }
+        startTimerTick();
+      }
+    });
 
     const progress = loadProgress();
-    const start = Number.isInteger(progress.lastPlayed) ? progress.lastPlayed : 0;
+    playMode = progress.playMode === "generated" ? "generated" : "classic";
+    pickerMode = playMode;
+    generatedDifficulty = DIFFS.includes(progress.generatedDifficulty) ? progress.generatedDifficulty : "easy";
+    pickerDiff = generatedDifficulty;
+    if (progress.generatedPuzzle && progress.generatedPuzzle.grid) {
+      generatedPuzzle = clonePuzzle(progress.generatedPuzzle);
+    }
+    if (Array.isArray(progress.generatedHistory) && progress.generatedHistory.length) {
+      generatedHistory = progress.generatedHistory.map(clonePuzzle);
+      generatedIndex = Math.max(0, Math.min(generatedHistory.length - 1, Number(progress.generatedIndex) || 0));
+      generatedPuzzle = clonePuzzle(generatedHistory[generatedIndex]);
+    } else if (generatedPuzzle) {
+      generatedHistory = [clonePuzzle(generatedPuzzle)];
+      generatedIndex = 0;
+    }
     renderStats();
-    loadLevel(start);
+    if (playMode === "generated") enterGenerated({ restore: true });
+    else {
+      const start = Number.isInteger(progress.lastPlayed) ? progress.lastPlayed : 0;
+      loadClassic(start, { restore: true });
+    }
   </script>
 </body>
 </html>
