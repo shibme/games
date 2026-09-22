@@ -192,6 +192,10 @@
       border-color: var(--sun);
       box-shadow: 0 0 0 2px rgba(240, 180, 41, 0.45);
     }
+    .cell.witness {
+      border-color: rgba(240, 180, 41, 0.72);
+      box-shadow: 0 0 0 1px rgba(240, 180, 41, 0.28);
+    }
     .cell.win {
       border-color: var(--good);
       animation: glow 0.7s ease both;
@@ -208,6 +212,7 @@
     }
     .edge.h { width: var(--gap); height: var(--cell); }
     .edge.v { width: var(--cell); height: var(--gap); }
+    .edge.hint { color: var(--sun); }
 
     .status {
       min-height: 1.4em;
@@ -745,6 +750,9 @@
     let play = [];
     let errors = new Set();
     let hintCells = new Set();
+    let hintWitness = new Set();
+    let hintEdges = new Set();
+    let pendingHint = null;
     let won = false;
     let generating = false;
     let autoWarnings = loadProgress().preferences?.autoWarnings !== false;
@@ -1337,6 +1345,7 @@
           if (play[i] === MOON) btn.classList.add("moon");
           if (errors.has(i)) btn.classList.add("error");
           else if (hintCells.has(i)) btn.classList.add("hint");
+          else if (hintWitness.has(i)) btn.classList.add("witness");
           if (won) {
             btn.classList.add("win");
             btn.style.animationDelay = (r + c) * 40 + "ms";
@@ -1344,7 +1353,10 @@
           if (i === popIndex && play[i]) btn.classList.add("pop");
           btn.disabled = given || generating;
           const label = play[i] === SUN ? "sun" : play[i] === MOON ? "moon" : "empty";
-          const extra = given ? ", given" : hintCells.has(i) ? ", hint" : "";
+          let extra = "";
+          if (given) extra = ", given";
+          else if (hintCells.has(i)) extra = ", hint";
+          else if (hintWitness.has(i)) extra = ", related";
           btn.setAttribute("aria-label", `Row ${r + 1}, column ${c + 1}, ${label}${extra}`);
           btn.addEventListener("click", () => cycle(i));
           frag.appendChild(btn);
@@ -1357,6 +1369,8 @@
           if (!e) continue;
           const el = document.createElement("div");
           el.className = "edge h";
+          el.dataset.edge = `h-${r}-${c}`;
+          if (hintEdges.has(`h-${r}-${c}`)) el.classList.add("hint");
           el.style.gridArea = `${r * 2 + 1} / ${c * 2 + 2}`;
           el.textContent = e === "eq" ? "=" : "×";
           frag.appendChild(el);
@@ -1368,6 +1382,8 @@
           if (!e) continue;
           const el = document.createElement("div");
           el.className = "edge v";
+          el.dataset.edge = `v-${r}-${c}`;
+          if (hintEdges.has(`v-${r}-${c}`)) el.classList.add("hint");
           el.textContent = e === "eq" ? "=" : "×";
           el.style.gridArea = `${r * 2 + 2} / ${c * 2 + 1}`;
           frag.appendChild(el);
@@ -1452,6 +1468,9 @@
       const key = puzzleCode(lv);
       errors = new Set();
       hintCells = new Set();
+      hintWitness = new Set();
+      hintEdges = new Set();
+      pendingHint = null;
       lastMistakeSignature = "";
       closeSheet(winSheet);
       if (opts && opts.keepTimer) {
@@ -1544,6 +1563,8 @@
       play[i] = play[i] === EMPTY ? SUN : play[i] === SUN ? MOON : EMPTY;
       persistTimer();
       hintCells = new Set();
+      hintWitness = new Set();
+      hintEdges = new Set();
       const conflicts = findConflicts();
       if (play.every(Boolean) && conflicts.size === 0) {
         onWin();
@@ -1647,59 +1668,301 @@
       return v === SUN ? "sun" : "moon";
     }
 
-    function findHint() {
-      const lv = currentLevel();
-      if (!lv) return { kind: "none", cells: new Set() };
-      const conflicts = findConflicts();
-      if (conflicts.size) return { kind: "conflict", cells: conflicts };
-      for (let i = 0; i < N * N; i++) {
-        if (play[i]) continue;
-        const sunOk = canPlace(play, i, SUN, lv.hEdges, lv.vEdges);
-        const moonOk = canPlace(play, i, MOON, lv.hEdges, lv.vEdges);
-        if (sunOk && !moonOk) return { kind: "forced", cells: new Set([i]), value: SUN };
-        if (moonOk && !sunOk) return { kind: "forced", cells: new Set([i]), value: MOON };
+    function opposite(v) {
+      return v === SUN ? MOON : SUN;
+    }
+
+    function edgeId(d, r, c) {
+      return `${d}-${r}-${c}`;
+    }
+
+    function lineCoords(kind, n) {
+      const coords = [];
+      if (kind === "row") {
+        for (let c = 0; c < N; c++) coords.push(idx(n, c));
+      } else {
+        for (let r = 0; r < N; r++) coords.push(idx(r, n));
       }
-      if (countSolutions(play, lv.hEdges, lv.vEdges, 1) === 0) {
-        for (let i = 0; i < N * N; i++) {
-          if (!play[i] || lv.grid[i]) continue;
-          const cleared = play.slice();
-          cleared[i] = EMPTY;
-          if (countSolutions(cleared, lv.hEdges, lv.vEdges, 1) > 0) {
-            return { kind: "wrong", cells: new Set([i]), value: play[i] };
+      return coords;
+    }
+
+    function namedForceOn(board, lv) {
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N - 1; c++) {
+          const e = lv.hEdges[r][c];
+          if (!e) continue;
+          const a = idx(r, c);
+          const b = idx(r, c + 1);
+          const hit = signForce(board, a, b, e, edgeId("h", r, c));
+          if (hit) return hit;
+        }
+      }
+      for (let r = 0; r < N - 1; r++) {
+        for (let c = 0; c < N; c++) {
+          const e = lv.vEdges[r][c];
+          if (!e) continue;
+          const a = idx(r, c);
+          const b = idx(r + 1, c);
+          const hit = signForce(board, a, b, e, edgeId("v", r, c));
+          if (hit) return hit;
+        }
+      }
+      for (let n = 0; n < N; n++) {
+        const hit = threeForce(board, lineCoords("row", n)) || threeForce(board, lineCoords("col", n));
+        if (hit) return hit;
+      }
+      for (let n = 0; n < N; n++) {
+        const hit = countForce(board, lineCoords("row", n), `Row ${n + 1}`)
+          || countForce(board, lineCoords("col", n), `Column ${n + 1}`);
+        if (hit) return hit;
+      }
+      return null;
+    }
+
+    function signForce(board, a, b, e, edge) {
+      const va = board[a];
+      const vb = board[b];
+      if (va && !vb) {
+        const value = e === "eq" ? va : opposite(va);
+        const mark = e === "eq" ? "=" : "×";
+        return {
+          kind: "sign",
+          cell: b,
+          value,
+          witnessCells: [a, b],
+          witnessEdges: [edge],
+          reason: `These two are ${mark}, so this must be a ${symbolName(value)}.`
+        };
+      }
+      if (vb && !va) {
+        const value = e === "eq" ? vb : opposite(vb);
+        const mark = e === "eq" ? "=" : "×";
+        return {
+          kind: "sign",
+          cell: a,
+          value,
+          witnessCells: [a, b],
+          witnessEdges: [edge],
+          reason: `These two are ${mark}, so this must be a ${symbolName(value)}.`
+        };
+      }
+      return null;
+    }
+
+    function threeForce(board, coords) {
+      for (let i = 0; i < N - 2; i++) {
+        const cells = [coords[i], coords[i + 1], coords[i + 2]];
+        const vals = cells.map((p) => board[p]);
+        let emptyAt = -1;
+        if (vals[0] && vals[0] === vals[1] && !vals[2]) emptyAt = 2;
+        else if (!vals[0] && vals[1] && vals[1] === vals[2]) emptyAt = 0;
+        else if (vals[0] && !vals[1] && vals[0] === vals[2]) emptyAt = 1;
+        if (emptyAt < 0) continue;
+        const known = emptyAt === 0 ? vals[1] : vals[0];
+        const value = opposite(known);
+        return {
+          kind: "three",
+          cell: cells[emptyAt],
+          value,
+          witnessCells: cells,
+          witnessEdges: [],
+          reason: `No three in a row, so this must be a ${symbolName(value)}.`
+        };
+      }
+      return null;
+    }
+
+    function countForce(board, coords, label) {
+      let suns = 0;
+      let moons = 0;
+      const ofType = [];
+      const empties = [];
+      for (const p of coords) {
+        if (board[p] === SUN) {
+          suns += 1;
+          ofType.push(p);
+        } else if (board[p] === MOON) {
+          moons += 1;
+          ofType.push(p);
+        } else empties.push(p);
+      }
+      if (!empties.length) return null;
+      if (suns === 3 && moons < 3) {
+        return {
+          kind: "count",
+          cell: empties[0],
+          value: MOON,
+          witnessCells: ofType.filter((p) => board[p] === SUN).concat([empties[0]]),
+          witnessEdges: [],
+          reason: `${label} already has 3 suns, so this must be a moon.`
+        };
+      }
+      if (moons === 3 && suns < 3) {
+        return {
+          kind: "count",
+          cell: empties[0],
+          value: SUN,
+          witnessCells: ofType.filter((p) => board[p] === MOON).concat([empties[0]]),
+          witnessEdges: [],
+          reason: `${label} already has 3 moons, so this must be a sun.`
+        };
+      }
+      return null;
+    }
+
+    function breaksNamed(board, lv) {
+      const cells = [];
+      const edges = [];
+      function markLine(coords) {
+        const vals = coords.map((p) => board[p]);
+        for (let i = 0; i < N - 2; i++) {
+          const a = vals[i], b = vals[i + 1], c = vals[i + 2];
+          if (a && a === b && b === c) {
+            cells.push(coords[i], coords[i + 1], coords[i + 2]);
+            return true;
           }
         }
-        const cells = new Set();
-        for (let i = 0; i < N * N; i++) {
-          if (play[i] && !lv.grid[i]) cells.add(i);
+        let s = 0, m = 0;
+        for (const v of vals) {
+          if (v === SUN) s++;
+          else if (v === MOON) m++;
         }
-        if (cells.size) return { kind: "wrong", cells };
+        if (s > 3 || m > 3) {
+          coords.forEach((p) => cells.push(p));
+          return true;
+        }
+        return false;
       }
-      return { kind: "none", cells: new Set() };
+      for (let n = 0; n < N; n++) {
+        if (markLine(lineCoords("row", n)) || markLine(lineCoords("col", n))) {
+          return { cells, edges };
+        }
+      }
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N - 1; c++) {
+          const e = lv.hEdges[r][c];
+          if (!e) continue;
+          const a = board[idx(r, c)], b = board[idx(r, c + 1)];
+          if (a && b && ((e === "eq" && a !== b) || (e === "neq" && a === b))) {
+            return { cells: [idx(r, c), idx(r, c + 1)], edges: [edgeId("h", r, c)] };
+          }
+        }
+      }
+      for (let r = 0; r < N - 1; r++) {
+        for (let c = 0; c < N; c++) {
+          const e = lv.vEdges[r][c];
+          if (!e) continue;
+          const a = board[idx(r, c)], b = board[idx(r + 1, c)];
+          if (a && b && ((e === "eq" && a !== b) || (e === "neq" && a === b))) {
+            return { cells: [idx(r, c), idx(r + 1, c)], edges: [edgeId("v", r, c)] };
+          }
+        }
+      }
+      return null;
+    }
+
+    function propagateNamed(board, lv) {
+      const copy = board.slice();
+      for (let step = 0; step < N * N; step++) {
+        const broken = breaksNamed(copy, lv);
+        if (broken) return { ok: false, failCells: broken.cells, failEdges: broken.edges };
+        const force = namedForceOn(copy, lv);
+        if (!force) return { ok: true };
+        if (!canPlace(copy, force.cell, force.value, lv.hEdges, lv.vEdges)) {
+          return {
+            ok: false,
+            failCells: [force.cell].concat(force.witnessCells || []),
+            failEdges: force.witnessEdges || []
+          };
+        }
+        copy[force.cell] = force.value;
+      }
+      return { ok: false, failCells: [], failEdges: [] };
+    }
+
+    function trialForce(board, lv) {
+      for (let i = 0; i < N * N; i++) {
+        if (board[i]) continue;
+        for (const assume of [SUN, MOON]) {
+          if (!canPlace(board, i, assume, lv.hEdges, lv.vEdges)) continue;
+          const copy = board.slice();
+          copy[i] = assume;
+          const result = propagateNamed(copy, lv);
+          if (result.ok) continue;
+          const value = opposite(assume);
+          const witnesses = Array.from(new Set([i].concat(result.failCells || [])));
+          return {
+            kind: "trial",
+            cell: i,
+            value,
+            witnessCells: witnesses,
+            witnessEdges: result.failEdges || [],
+            reason: `A ${symbolName(assume)} here would break a rule, so this must be a ${symbolName(value)}.`
+          };
+        }
+      }
+      return null;
+    }
+
+    function findHint() {
+      const lv = currentLevel();
+      if (!lv) {
+        return { kind: "none", reason: "No explained step yet. Keep going.", witnessCells: [], witnessEdges: [] };
+      }
+      const conflicts = findConflicts();
+      if (conflicts.size) {
+        return {
+          kind: "conflict",
+          cells: conflicts,
+          witnessCells: [...conflicts],
+          witnessEdges: [],
+          reason: "These cells break a rule. Change a highlighted cell first."
+        };
+      }
+      const named = namedForceOn(play, lv);
+      if (named) return named;
+      const trial = trialForce(play, lv);
+      if (trial) return trial;
+      return { kind: "none", reason: "No explained step yet. Keep going.", witnessCells: [], witnessEdges: [] };
+    }
+
+    function hintFollowed(h) {
+      if (!h) return true;
+      if (h.kind === "none") return true;
+      if (h.kind === "conflict") return findConflicts().size === 0;
+      return play[h.cell] === h.value;
+    }
+
+    function showHint(h, isNew) {
+      if (h.kind === "conflict") {
+        errors = h.cells;
+        hintCells = new Set();
+        hintWitness = new Set();
+        hintEdges = new Set();
+        if (isNew) recordMistake(h.cells);
+        renderBoard();
+        setStatus(h.reason, "bad");
+        return;
+      }
+      errors = new Set();
+      hintCells = h.cell != null ? new Set([h.cell]) : new Set();
+      hintWitness = new Set((h.witnessCells || []).filter((p) => p !== h.cell));
+      hintEdges = new Set(h.witnessEdges || []);
+      renderBoard();
+      setStatus(h.reason, h.kind === "conflict" ? "bad" : undefined);
     }
 
     function hint() {
       if (won || generating) return;
-      const result = findHint();
-      recordHint();
-      if (result.kind === "conflict") {
-        errors = result.cells;
-        hintCells = new Set();
-        recordMistake(result.cells);
-        renderBoard();
-        setStatus("These cells break a rule. Change a highlighted cell first.", "bad");
+      if (pendingHint && !hintFollowed(pendingHint)) {
+        showHint(pendingHint, false);
         return;
       }
-      errors = new Set();
-      hintCells = result.cells;
-      renderBoard();
-      if (result.kind === "forced") {
-        setStatus(`This cell must be a ${symbolName(result.value)}. Only that symbol fits without breaking a rule.`);
-      } else if (result.kind === "wrong") {
-        const named = result.value ? `This ${symbolName(result.value)} cannot be right. Change it first.` : "A filled cell cannot be right. Change a highlighted cell first.";
-        setStatus(named, "bad");
-      } else {
-        setStatus("No forced step yet. Keep going.");
-      }
+      const result = findHint();
+      if (result.kind !== "none") pendingHint = result;
+      else pendingHint = null;
+      recordHint();
+      showHint(result, true);
     }
 
     function onWin() {
@@ -1709,6 +1972,9 @@
       persistTimer();
       errors = new Set();
       hintCells = new Set();
+      hintWitness = new Set();
+      hintEdges = new Set();
+      pendingHint = null;
       hintBtn.disabled = true;
       const solveMs = timerElapsedMs;
       markCompleted(currentLevel().id);
@@ -1731,6 +1997,8 @@
       if (won || generating) return;
       incrementStat("checks");
       hintCells = new Set();
+      hintWitness = new Set();
+      hintEdges = new Set();
       errors = findConflicts();
       const empty = play.some((v) => !v);
       if (errors.size) {
