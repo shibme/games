@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f4efe4">
+  <title>Games</title>
+  <style>
+    :root {
+      --bg: #f4efe4;
+      --ink: #1c2430;
+      --muted: #5c6674;
+      --card: #fffdf8;
+      --line: #d9d0c0;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, #fff8ea, var(--bg));
+      color: var(--ink);
+      min-height: 100dvh;
+      padding: max(16px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+    }
+
+    .wrap {
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.7rem;
+      letter-spacing: -0.03em;
+      margin: 0 0 6px;
+    }
+
+    .lede {
+      margin: 0 0 18px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .games {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .games a {
+      display: block;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 8px 24px rgba(40, 30, 10, 0.06);
+    }
+
+    .games a:hover,
+    .games a:focus-visible {
+      border-color: var(--ink);
+    }
+
+    .games a:focus-visible {
+      outline: 2px solid var(--ink);
+      outline-offset: 2px;
+    }
+
+    .games h2 {
+      margin: 0 0 4px;
+      font-size: 1.12rem;
+    }
+
+    .games p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Games</h1>
+    <p class="lede">Small static puzzles you can play in the browser. More will show up here as they are added.</p>
+    <ul class="games">
+      <li>
+        <a href="tango/">
+          <h2>Tango</h2>
+          <p>A 6×6 sun and moon logic puzzle. Fill each row and column without breaking the rules.</p>
+        </a>
+      </li>
+    </ul>
+  </div>
+</body>
+</html>
