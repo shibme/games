@@ -299,6 +299,90 @@
     .rules-list { margin: 0; padding-left: 1.15rem; color: var(--muted); }
     .rules-list li { margin: 8px 0; }
 
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 4px 0 16px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.04);
+    }
+    .setting-copy strong { display: block; }
+    .setting-copy span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.35;
+    }
+    .switch {
+      position: relative;
+      width: 52px;
+      height: 30px;
+      flex: none;
+    }
+    .switch input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .switch span {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 999px;
+      background: #111a2b;
+      border: 1px solid var(--line);
+      cursor: pointer;
+      transition: background 0.18s ease, border-color 0.18s ease;
+    }
+    .switch span::after {
+      content: "";
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      left: 4px;
+      top: 4px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: transform 0.18s ease, background 0.18s ease;
+    }
+    .switch input:checked + span {
+      background: rgba(61, 206, 160, 0.22);
+      border-color: var(--good);
+    }
+    .switch input:checked + span::after {
+      transform: translateX(22px);
+      background: var(--good);
+    }
+    .switch input:focus-visible + span {
+      outline: 2px solid var(--sun);
+      outline-offset: 3px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .stat {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.04);
+    }
+    .stat strong {
+      display: block;
+      color: var(--ink);
+      font-size: 1.35rem;
+    }
+    .stat span {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
     .win-card {
       text-align: center;
       position: relative;
@@ -380,6 +464,7 @@
     </div>
     <div class="aux">
       <button type="button" class="ghost" id="openRules">Rules</button>
+      <button type="button" class="ghost" id="openStats">Stats &amp; settings</button>
     </div>
   </div>
 
@@ -414,6 +499,32 @@
     </div>
   </div>
 
+  <div id="statsSheet" class="sheet" hidden>
+    <div class="sheet-card" role="dialog" aria-labelledby="statsTitle">
+      <h2 id="statsTitle">Stats &amp; settings</h2>
+      <div class="setting-row">
+        <div class="setting-copy">
+          <strong>Auto warnings</strong>
+          <span>Highlight a rule conflict as soon as it happens.</span>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="autoWarnings" aria-label="Automatic conflict warnings">
+          <span aria-hidden="true"></span>
+        </label>
+      </div>
+      <div class="stats-grid" aria-label="Gameplay statistics">
+        <div class="stat"><strong id="statCompleted">0</strong><span>Levels completed</span></div>
+        <div class="stat"><strong id="statWins">0</strong><span>Total wins</span></div>
+        <div class="stat"><strong id="statChecks">0</strong><span>Checks used</span></div>
+        <div class="stat"><strong id="statMistakes">0</strong><span>Mistakes detected</span></div>
+        <div class="stat"><strong id="statResets">0</strong><span>Resets used</span></div>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" id="closeStats" class="primary">Done</button>
+      </div>
+    </div>
+  </div>
+
   <div id="winSheet" class="sheet" hidden>
     <div class="sheet-card win-card" role="dialog" aria-labelledby="winTitle">
       <div class="burst" id="burst" aria-hidden="true"></div>
@@ -442,17 +553,21 @@
     const checkBtn = document.getElementById("checkBtn");
     const pickerSheet = document.getElementById("pickerSheet");
     const rulesSheet = document.getElementById("rulesSheet");
+    const statsSheet = document.getElementById("statsSheet");
     const winSheet = document.getElementById("winSheet");
     const levelGrid = document.getElementById("levelGrid");
     const winCopy = document.getElementById("winCopy");
     const winNextBtn = document.getElementById("winNextBtn");
     const burstEl = document.getElementById("burst");
+    const autoWarningsEl = document.getElementById("autoWarnings");
 
     let levelIndex = 0;
     let play = [];
     let errors = new Set();
     let won = false;
     let pickerDiff = "easy";
+    let autoWarnings = loadProgress().preferences?.autoWarnings !== false;
+    let lastMistakeSignature = "";
 
     function idx(r, c) { return r * N + c; }
 
@@ -467,6 +582,44 @@
     function saveProgress(patch) {
       const cur = loadProgress();
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...cur, ...patch }));
+    }
+
+    function getStats() {
+      const stats = loadProgress().stats || {};
+      return {
+        wins: Number(stats.wins) || 0,
+        checks: Number(stats.checks) || 0,
+        mistakes: Number(stats.mistakes) || 0,
+        resets: Number(stats.resets) || 0
+      };
+    }
+
+    function incrementStat(key) {
+      const stats = getStats();
+      stats[key] += 1;
+      saveProgress({ stats });
+      renderStats();
+    }
+
+    function renderStats() {
+      const stats = getStats();
+      document.getElementById("statCompleted").textContent = String(completedSet().size);
+      document.getElementById("statWins").textContent = String(stats.wins);
+      document.getElementById("statChecks").textContent = String(stats.checks);
+      document.getElementById("statMistakes").textContent = String(stats.mistakes);
+      document.getElementById("statResets").textContent = String(stats.resets);
+      autoWarningsEl.checked = autoWarnings;
+    }
+
+    function recordMistake(conflicts) {
+      if (!conflicts.size) {
+        lastMistakeSignature = "";
+        return;
+      }
+      const signature = `${levelIndex}:${play.join("")}`;
+      if (signature === lastMistakeSignature) return;
+      lastMistakeSignature = signature;
+      incrementStat("mistakes");
     }
 
     function completedSet() {
@@ -594,6 +747,7 @@
       play = lv.grid.slice();
       errors = new Set();
       won = false;
+      lastMistakeSignature = "";
       closeSheet(winSheet);
       saveProgress({ lastPlayed: levelIndex });
       updateChrome();
@@ -606,11 +760,18 @@
     function cycle(i) {
       if (currentLevel().grid[i] !== EMPTY || won) return;
       play[i] = play[i] === EMPTY ? SUN : play[i] === SUN ? MOON : EMPTY;
-      errors = new Set();
-      renderBoard(i);
-      if (play.every(Boolean) && findConflicts().size === 0) {
+      const conflicts = findConflicts();
+      if (play.every(Boolean) && conflicts.size === 0) {
         onWin();
+      } else if (autoWarnings && conflicts.size) {
+        errors = conflicts;
+        recordMistake(conflicts);
+        renderBoard(i);
+        setStatus("That move breaks a rule. Try another symbol.", "bad");
       } else {
+        errors = new Set();
+        if (!conflicts.size) recordMistake(conflicts);
+        renderBoard(i);
         setStatus("Keep going, or tap Check to highlight mistakes.");
       }
     }
@@ -698,9 +859,11 @@
     }
 
     function onWin() {
+      if (won) return;
       won = true;
       errors = new Set();
       markCompleted(currentLevel().id);
+      incrementStat("wins");
       renderBoard();
       const more = levelIndex < LEVELS.length - 1;
       const msg = more ? "Solved. Next level when you are ready." : "Solved. That was the last level.";
@@ -712,10 +875,13 @@
     }
 
     function check() {
+      if (won) return;
+      incrementStat("checks");
       errors = findConflicts();
       const empty = play.some((v) => !v);
       if (errors.size) {
         won = false;
+        recordMistake(errors);
         renderBoard();
         setStatus("Some cells break the rules.", "bad");
         return;
@@ -730,7 +896,10 @@
 
     prevBtn.addEventListener("click", () => loadLevel(levelIndex - 1));
     nextBtn.addEventListener("click", () => loadLevel(levelIndex + 1));
-    resetBtn.addEventListener("click", () => loadLevel(levelIndex));
+    resetBtn.addEventListener("click", () => {
+      incrementStat("resets");
+      loadLevel(levelIndex);
+    });
     checkBtn.addEventListener("click", check);
     document.getElementById("openPicker").addEventListener("click", () => {
       pickerDiff = currentLevel().difficulty;
@@ -740,6 +909,29 @@
     document.getElementById("closePicker").addEventListener("click", () => closeSheet(pickerSheet));
     document.getElementById("openRules").addEventListener("click", () => openSheet(rulesSheet));
     document.getElementById("closeRules").addEventListener("click", () => closeSheet(rulesSheet));
+    document.getElementById("openStats").addEventListener("click", () => {
+      renderStats();
+      openSheet(statsSheet);
+    });
+    document.getElementById("closeStats").addEventListener("click", () => closeSheet(statsSheet));
+    autoWarningsEl.addEventListener("change", () => {
+      autoWarnings = autoWarningsEl.checked;
+      const cur = loadProgress();
+      saveProgress({
+        preferences: { ...(cur.preferences || {}), autoWarnings }
+      });
+      const conflicts = findConflicts();
+      errors = autoWarnings ? conflicts : new Set();
+      if (autoWarnings && conflicts.size) {
+        recordMistake(conflicts);
+        setStatus("Automatic warnings are on. These cells break a rule.", "bad");
+      } else if (!autoWarnings) {
+        setStatus("Automatic warnings are off. Use Check when you want help.");
+      } else {
+        setStatus("Automatic warnings are on.");
+      }
+      renderBoard();
+    });
     document.getElementById("stayBtn").addEventListener("click", () => closeSheet(winSheet));
     winNextBtn.addEventListener("click", () => loadLevel(levelIndex + 1));
     document.querySelectorAll(".chip").forEach((chip) => {
@@ -748,7 +940,7 @@
         renderPicker();
       });
     });
-    [pickerSheet, rulesSheet, winSheet].forEach((sheet) => {
+    [pickerSheet, rulesSheet, statsSheet, winSheet].forEach((sheet) => {
       sheet.addEventListener("click", (e) => {
         if (e.target === sheet) closeSheet(sheet);
       });
@@ -756,6 +948,7 @@
 
     const progress = loadProgress();
     const start = Number.isInteger(progress.lastPlayed) ? progress.lastPlayed : 0;
+    renderStats();
     loadLevel(start);
   </script>
 </body>
