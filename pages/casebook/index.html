@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#161c28">
+  <title>Casebook</title>
+  <style>
+    :root {
+      --bg: #121824;
+      --bg2: #1b2436;
+      --ink: #f4efe4;
+      --muted: #b9c1cf;
+      --card: #252f43;
+      --card2: #1b2537;
+      --line: #42506a;
+      --gold: #e4b85b;
+      --red: #d87676;
+      --green: #58c99d;
+      --blue: #8da5e8;
+      --easy: #69d8a5;
+      --medium: #f0bc5c;
+      --hard: #ef8378;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      min-height: 100dvh;
+      padding: max(10px, env(safe-area-inset-top)) 12px max(18px, env(safe-area-inset-bottom));
+      background:
+        radial-gradient(850px 450px at 0% -10%, #3b2d18, transparent 56%),
+        radial-gradient(700px 420px at 110% 8%, #26365e, transparent 52%),
+        var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      touch-action: manipulation;
+    }
+    button, select { font: inherit; }
+    button {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0 13px;
+      background: rgba(255,255,255,.055);
+      color: var(--ink);
+      font-weight: 750;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:disabled { opacity: .4; cursor: default; }
+    button.primary { background: var(--gold); color: #211708; border-color: #d4a746; }
+    button.ghost { background: transparent; border: 0; color: var(--muted); }
+    button:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 3px;
+    }
+    .wrap { width: min(100%, 620px); margin: 0 auto; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .brand, .header-tools { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .back {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      flex: none;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.055);
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 1.15rem;
+    }
+    h1 { margin: 0; font-size: 1.35rem; letter-spacing: -.03em; }
+    .timer {
+      min-width: 3.5em;
+      text-align: right;
+      color: var(--muted);
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+    }
+    .case-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 44px;
+      border-radius: 999px;
+      padding: 5px 10px 5px 12px;
+      white-space: nowrap;
+      max-width: 230px;
+    }
+    .case-pill .label { overflow: hidden; text-overflow: ellipsis; }
+    .diff, .type-chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: .72rem;
+      font-weight: 800;
+      text-transform: capitalize;
+      background: rgba(255,255,255,.08);
+    }
+    .diff.easy { color: var(--easy); }
+    .diff.medium { color: var(--medium); }
+    .diff.hard { color: var(--hard); }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(180deg, #2b3850, var(--card));
+      box-shadow: 0 18px 50px rgba(0,0,0,.28);
+      overflow: hidden;
+    }
+    .case-head { padding: 18px 18px 14px; border-bottom: 1px solid var(--line); }
+    .eyebrow {
+      margin: 0 0 5px;
+      color: var(--gold);
+      font-size: .76rem;
+      font-weight: 850;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h2 { margin: 0; font-size: clamp(1.35rem, 5vw, 1.7rem); letter-spacing: -.025em; }
+    .prologue {
+      margin: 9px 0 0;
+      color: var(--muted);
+      line-height: 1.5;
+      font-family: ui-serif, Georgia, serif;
+    }
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      padding: 10px;
+      gap: 7px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(0,0,0,.1);
+    }
+    .tab[aria-selected="true"] { color: #201708; background: var(--gold); border-color: var(--gold); }
+    .panel { padding: 15px; }
+    .panel[hidden] { display: none; }
+    .section-title { margin: 0 0 10px; font-size: 1rem; }
+    .clues, .statements, .pins, .deductions { display: grid; gap: 9px; }
+    .clue, .statement, .pin, .deduction {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(0,0,0,.13);
+      line-height: 1.4;
+    }
+    .clue strong, .statement strong { color: var(--gold); }
+    .statement {
+      width: 100%;
+      min-height: 58px;
+      text-align: left;
+      color: var(--muted);
+      font-weight: 650;
+    }
+    .statement[data-mark="true"] { border-color: var(--green); color: var(--ink); }
+    .statement[data-mark="false"] { border-color: var(--red); color: var(--ink); }
+    .statement.hint, .grid-btn.hint, .pin.hint { box-shadow: 0 0 0 2px rgba(228,184,91,.55); }
+    .clue.witness, .statement.witness, .pin.witness { border-color: var(--gold); }
+    .rule-note {
+      margin: 0 0 11px;
+      padding: 10px 12px;
+      border-left: 3px solid var(--gold);
+      color: var(--muted);
+      background: rgba(228,184,91,.08);
+      border-radius: 0 10px 10px 0;
+    }
+    .grid-wrap { overflow-x: auto; padding-bottom: 3px; }
+    .logic-grid {
+      display: grid;
+      gap: 5px;
+      min-width: 390px;
+      align-items: stretch;
+    }
+    .grid-label {
+      display: grid;
+      place-items: center;
+      min-height: 44px;
+      padding: 5px;
+      color: var(--muted);
+      font-size: .74rem;
+      text-align: center;
+    }
+    .grid-label.row { justify-items: start; color: var(--ink); font-weight: 700; }
+    .grid-btn {
+      min-height: 44px;
+      padding: 0;
+      border-radius: 10px;
+      font-size: 1.1rem;
+    }
+    .grid-btn[data-mark="no"] { color: var(--red); background: rgba(216,118,118,.1); }
+    .grid-btn[data-mark="yes"] { color: var(--green); background: rgba(88,201,157,.1); }
+    .pin-board {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      padding: 12px;
+      border-radius: 16px;
+      background:
+        linear-gradient(rgba(56,38,23,.18), rgba(56,38,23,.18)),
+        #66513b;
+      border: 1px solid #80684e;
+    }
+    .pin {
+      position: relative;
+      min-height: 86px;
+      color: #271d13;
+      background: #f1e6ca;
+      border-color: #d8c7a1;
+      box-shadow: 0 5px 12px rgba(0,0,0,.18);
+      text-align: left;
+      font-size: .88rem;
+      transform: rotate(var(--tilt, -1deg));
+    }
+    .pin:nth-child(even) { --tilt: 1deg; }
+    .pin::before {
+      content: "";
+      position: absolute;
+      top: 6px; left: 50%;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #a33f3f;
+      transform: translateX(-50%);
+    }
+    .pin.selected { outline: 3px solid var(--gold); outline-offset: 1px; }
+    .pin.locked { opacity: .45; }
+    .link-actions, .controls {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .link-actions { grid-template-columns: 1fr 1fr; }
+    .controls { grid-template-columns: repeat(6, 1fr); padding: 0 15px 15px; }
+    #checkBtn, #hintBtn { grid-column: span 3; }
+    #resetBtn, #accuseBtn { grid-column: span 3; }
+    .status {
+      min-height: 2.8em;
+      margin: 0;
+      padding: 12px 17px;
+      color: var(--muted);
+      text-align: center;
+      font-weight: 650;
+      border-top: 1px solid var(--line);
+    }
+    .status.bad { color: var(--red); }
+    .status.good { color: var(--green); }
+    .aux { display: flex; justify-content: center; gap: 3px; margin-top: 10px; flex-wrap: wrap; }
+    .sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: end center;
+      padding: 14px;
+      background: rgba(5,9,16,.72);
+      backdrop-filter: blur(7px);
+    }
+    .sheet[hidden] { display: none; }
+    .sheet-card {
+      width: min(100%, 560px);
+      max-height: min(86dvh, 780px);
+      overflow: auto;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--bg2);
+      box-shadow: 0 22px 70px rgba(0,0,0,.5);
+      animation: rise .2s ease both;
+    }
+    .sheet-card h2 { margin-bottom: 12px; }
+    .sheet-actions { display: flex; gap: 8px; margin-top: 15px; }
+    .sheet-actions button { flex: 1; }
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+    .chip { min-height: 44px; border-radius: 999px; padding: 0 12px; }
+    .chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    .case-list { display: grid; gap: 8px; }
+    .case-choice {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      padding: 11px 13px;
+    }
+    .case-choice small { color: var(--muted); display: block; margin-top: 2px; font-weight: 600; }
+    .case-choice.done::after { content: "✓"; color: var(--green); }
+    .accuse-grid { display: grid; gap: 12px; }
+    label.field { display: grid; gap: 6px; color: var(--muted); font-size: .85rem; }
+    select {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0 11px;
+      color: var(--ink);
+      background: var(--card2);
+    }
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.04);
+    }
+    .stat strong { display: block; font-size: 1.3rem; }
+    .stat span { color: var(--muted); font-size: .78rem; }
+    .rules { color: var(--muted); line-height: 1.45; padding-left: 1.15rem; }
+    .rules li { margin: 8px 0; }
+    .win-card { place-self: center; text-align: center; }
+    .epilogue { color: var(--muted); line-height: 1.5; font-family: ui-serif, Georgia, serif; }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+    @keyframes rise { from { transform: translateY(16px); opacity: .5; } }
+    @media (min-width: 520px) {
+      .pin-board { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .panel { padding: 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap" id="app">
+    <header>
+      <div class="brand">
+        <a class="back" href="../" aria-label="All games">←</a>
+        <h1>Casebook</h1>
+      </div>
+      <div class="header-tools">
+        <div class="timer" id="timer" aria-label="Case time">0:00</div>
+        <button type="button" class="case-pill" id="openPicker" aria-haspopup="dialog">
+          <span class="label" id="caseLabel">Case 1</span>
+          <span class="diff easy" id="difficulty">Easy</span>
+          <span aria-hidden="true">▾</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="card">
+      <section class="case-head">
+        <p class="eyebrow" id="caseType">Alibi grid</p>
+        <h2 id="caseTitle">Loading case…</h2>
+        <p class="prologue" id="prologue"></p>
+      </section>
+      <div class="tabs" role="tablist" aria-label="Case views">
+        <button type="button" class="tab" id="evidenceTab" role="tab" aria-controls="evidencePanel" aria-selected="true">Evidence</button>
+        <button type="button" class="tab" id="notebookTab" role="tab" aria-controls="notebookPanel" aria-selected="false">Notebook</button>
+      </div>
+      <section class="panel" id="evidencePanel" role="tabpanel" aria-labelledby="evidenceTab"></section>
+      <section class="panel" id="notebookPanel" role="tabpanel" aria-labelledby="notebookTab" hidden></section>
+      <p class="status" id="status" role="status" aria-live="polite">Read the evidence, then open your notebook.</p>
+      <div class="controls">
+        <button type="button" class="primary" id="checkBtn">Check</button>
+        <button type="button" id="hintBtn">Hint</button>
+        <button type="button" id="resetBtn">Reset</button>
+        <button type="button" id="accuseBtn">Accuse</button>
+      </div>
+    </main>
+    <div class="aux">
+      <button type="button" class="ghost" id="openRules">How to play</button>
+      <button type="button" class="ghost" id="openStats">Stats</button>
+      <button type="button" class="ghost" id="copyLink">Copy case link</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="pickerSheet" hidden>
+    <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="pickerTitle" tabindex="-1">
+      <h2 id="pickerTitle">Choose a case</h2>
+      <div class="chips" id="modeChips">
+        <button type="button" class="chip on" data-mode="authored">Casebook</button>
+        <button type="button" class="chip" data-mode="generated">Generated</button>
+      </div>
+      <div class="chips" id="typeChips">
+        <button type="button" class="chip on" data-type="alibi">Alibi grid</button>
+        <button type="button" class="chip" data-type="lies">Strike the lies</button>
+        <button type="button" class="chip" data-type="cork">Corkboard</button>
+      </div>
+      <div class="chips" id="difficultyChips">
+        <button type="button" class="chip on" data-diff="easy">Easy</button>
+        <button type="button" class="chip" data-diff="medium">Medium</button>
+        <button type="button" class="chip" data-diff="hard">Hard</button>
+      </div>
+      <div class="case-list" id="caseList"></div>
+      <div class="sheet-actions">
+        <button type="button" id="closePicker">Close</button>
+        <button type="button" class="primary" id="newGenerated" hidden>New generated case</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="rulesSheet" hidden>
+    <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="rulesTitle" tabindex="-1">
+      <h2 id="rulesTitle">How to investigate</h2>
+      <ul class="rules">
+        <li>Every case has one culprit and one decisive proof.</li>
+        <li>Use Evidence for the story facts and Notebook for your deductions.</li>
+        <li>Check reports contradictions without revealing the solution.</li>
+        <li>Hint explains one logical next step and never fills it for you.</li>
+        <li>Reset clears your notes but keeps the case timer running.</li>
+      </ul>
+      <div class="sheet-actions"><button type="button" class="primary" id="closeRules">Got it</button></div>
+    </div>
+  </div>
+
+  <div class="sheet" id="statsSheet" hidden>
+    <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="statsTitle" tabindex="-1">
+      <h2 id="statsTitle">Detective record</h2>
+      <div class="stats-grid">
+        <div class="stat"><strong id="statAuthored">0</strong><span>Cases solved</span></div>
+        <div class="stat"><strong id="statGenerated">0</strong><span>Generated solves</span></div>
+        <div class="stat"><strong id="statWins">0</strong><span>Total wins</span></div>
+        <div class="stat"><strong id="statHints">0</strong><span>Hints used</span></div>
+        <div class="stat"><strong id="statChecks">0</strong><span>Checks used</span></div>
+        <div class="stat"><strong id="statMisses">0</strong><span>Wrong accusations</span></div>
+        <div class="stat"><strong id="statBest">—</strong><span>Best solve</span></div>
+        <div class="stat"><strong id="statAvg">—</strong><span>Average solve</span></div>
+      </div>
+      <p class="rule-note" id="caseStat">This case: not started</p>
+      <div class="sheet-actions"><button type="button" class="primary" id="closeStats">Done</button></div>
+    </div>
+  </div>
+
+  <div class="sheet" id="accuseSheet" hidden>
+    <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="accuseTitle" tabindex="-1">
+      <h2 id="accuseTitle">Make your accusation</h2>
+      <p class="rule-note">Name the culprit and the evidence that proves it.</p>
+      <div class="accuse-grid">
+        <label class="field">Culprit<select id="culpritSelect"></select></label>
+        <label class="field">Decisive proof<select id="proofSelect"></select></label>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" id="closeAccuse">Keep investigating</button>
+        <button type="button" class="primary" id="submitAccuse">Accuse</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="winSheet" hidden>
+    <div class="sheet-card win-card" role="dialog" aria-modal="true" aria-labelledby="winTitle" tabindex="-1">
+      <p class="eyebrow">Case closed</p>
+      <h2 id="winTitle">A sound deduction</h2>
+      <p class="epilogue" id="epilogue"></p>
+      <p id="winTime"></p>
+      <div class="sheet-actions">
+        <button type="button" id="stayBtn">Review case</button>
+        <button type="button" class="primary" id="nextCaseBtn">Next case</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "casebook-progress";
+    const STORAGE_VERSION = 1;
+    const GENERATED_RECORD_CAP = 100;
+    const TYPES = ["alibi", "lies", "cork"];
+    const DIFFS = ["easy", "medium", "hard"];
+    const TYPE_LABEL = { alibi: "Alibi grid", lies: "Strike the lies", cork: "Corkboard" };
+
+    function clue(id, text, constraint) { return { id, text, ...constraint }; }
+    function alibiCase(id, slug, title, difficulty, prologue, suspects, locations, solution, clues, proof, epilogue) {
+      return {
+        id, slug, title, type: "alibi", difficulty, prologue, suspects, locations, clues,
+        crimeLocation: solution.location,
+        proofs: clues.map((c) => ({ id: c.id, text: c.text })),
+        solution: { culprit: solution.culprit, proof },
+        epilogue
+      };
+    }
+
+    function predicateText(predicate, suspects) {
+      if (predicate.kind === "not") return `${suspects.find((s) => s.id === predicate.a).name} could not be the culprit.`;
+      if (predicate.kind === "oneOf") {
+        const a = suspects.find((s) => s.id === predicate.a).name;
+        const b = suspects.find((s) => s.id === predicate.b).name;
+        return `The culprit was either ${a} or ${b}.`;
+      }
+      const a = suspects.find((s) => s.id === predicate.a).name;
+      return `${a} was the culprit.`;
+    }
+
+    function evalPredicate(predicate, culprit) {
+      if (predicate.kind === "not") return culprit !== predicate.a;
+      if (predicate.kind === "oneOf") return culprit === predicate.a || culprit === predicate.b;
+      return culprit === predicate.a;
+    }
+
+    function combinations(items, n, start = 0, acc = [], out = []) {
+      if (acc.length === n) { out.push(acc.slice()); return out; }
+      for (let i = start; i <= items.length - (n - acc.length); i++) {
+        acc.push(items[i]);
+        combinations(items, n, i + 1, acc, out);
+        acc.pop();
+      }
+      return out;
+    }
+
+    function makeLieCase(id, slug, title, difficulty, prologue, suspects, culprit, proofText, epilogue) {
+      const predicates = [];
+      suspects.forEach((s) => predicates.push({ kind: "not", a: s.id }));
+      for (let i = 0; i < suspects.length; i++) {
+        for (let j = i + 1; j < suspects.length; j++) {
+          predicates.push({ kind: "oneOf", a: suspects[i].id, b: suspects[j].id });
+        }
+      }
+      let chosen = null;
+      let falseCount = 0;
+      for (const combo of combinations(predicates, Math.min(5, predicates.length))) {
+        const countFor = (candidate) => combo.filter((p) => !evalPredicate(p, candidate)).length;
+        const target = countFor(culprit);
+        const matching = suspects.filter((s) => countFor(s.id) === target);
+        if (matching.length === 1) { chosen = combo; falseCount = target; break; }
+      }
+      if (!chosen) throw new Error("Could not build unique lie case " + id);
+      const statements = chosen.map((p, i) => ({
+        id: `s${i + 1}`,
+        speaker: suspects[i % suspects.length].name,
+        text: predicateText(p, suspects),
+        predicate: p
+      }));
+      return {
+        id, slug, title, type: "lies", difficulty, prologue, suspects, statements,
+        lieRule: `Exactly ${falseCount} of these statements ${falseCount === 1 ? "is" : "are"} false.`,
+        falseCount,
+        proofs: statements.map((s) => ({ id: s.id, text: `${s.speaker}: “${s.text}”` })),
+        solution: { culprit, proof: statements.find((s) => !evalPredicate(s.predicate, culprit)).id },
+        proofText,
+        epilogue
+      };
+    }
+
+    function corkCase(id, slug, title, difficulty, prologue, suspects, nodes, links, solution, epilogue) {
+      return {
+        id, slug, title, type: "cork", difficulty, prologue, suspects, nodes, links,
+        proofs: nodes.filter((n) => n.proof).map((n) => ({ id: n.id, text: n.text })),
+        solution, epilogue
+      };
+    }
+
+    const AUTHORED = [
+      alibiCase(
+        1, "marigold-manor", "The Last Toast at Marigold Manor", "easy",
+        "A toast ends in a darkened dining room. When the lamps return, host Lionel Marigold is dead beside the conservatory door. Four guests insist they were elsewhere.",
+        [{id:"ada",name:"Ada Bell"},{id:"basil",name:"Basil Reed"},{id:"clara",name:"Clara Finch"},{id:"dev",name:"Dev Shah"}],
+        [{id:"kitchen",name:"Kitchen"},{id:"library",name:"Library"},{id:"terrace",name:"Terrace"},{id:"conservatory",name:"Conservatory"}],
+        { culprit:"clara", location:"conservatory" },
+        [
+          clue("m1","Ada’s flour-dusted sleeves place her in the kitchen.",{kind:"is",suspect:"ada",location:"kitchen"}),
+          clue("m2","Basil returned a first edition to the library.",{kind:"is",suspect:"basil",location:"library"}),
+          clue("m3","Dev’s wet shoes match the terrace rain.",{kind:"is",suspect:"dev",location:"terrace"})
+        ],
+        "m3",
+        "Clara had slipped through the conservatory while the others left unmistakable traces elsewhere. The missing cordial bottle in her gardening basket completed the proof."
+      ),
+      alibiCase(
+        2, "bellweather-express", "Murder on the Bellweather Express", "medium",
+        "The night train enters a tunnel; a collector never emerges from his compartment. Every passenger claims a different carriage at the fatal minute.",
+        [{id:"iris",name:"Iris Vale"},{id:"jonas",name:"Jonas Pike"},{id:"mina",name:"Mina Cole"},{id:"otto",name:"Otto Grey"}],
+        [{id:"dining",name:"Dining car"},{id:"lounge",name:"Lounge"},{id:"baggage",name:"Baggage car"},{id:"compartment",name:"Compartment"}],
+        { culprit:"otto", location:"compartment" },
+        [
+          clue("b1","Iris signed the dining-car receipt.",{kind:"is",suspect:"iris",location:"dining"}),
+          clue("b2","Mina was not in the lounge; the porter saw her among the trunks.",{kind:"is",suspect:"mina",location:"baggage"}),
+          clue("b3","Jonas was neither in baggage nor the victim’s compartment.",{kind:"not",suspect:"jonas",location:"baggage"}),
+          clue("b4","The lounge gramophone played Jonas’s requested record.",{kind:"is",suspect:"jonas",location:"lounge"})
+        ],
+        "b4",
+        "Only Otto had no place left but the compartment. The brass ticket punch in his coat matched the neat mark on the victim’s locked dispatch box."
+      ),
+      alibiCase(
+        3, "foxglove-lodge", "Snowfall at Foxglove Lodge", "medium",
+        "A blizzard seals the lodge. At midnight its owner is found in the map room, while four visitors offer alibis softened by snow and candlelight.",
+        [{id:"nell",name:"Nell Rowan"},{id:"peregrin",name:"Peregrin Moss"},{id:"quinn",name:"Quinn Lake"},{id:"rosa",name:"Rosa Hart"}],
+        [{id:"pantry",name:"Pantry"},{id:"parlor",name:"Parlor"},{id:"porch",name:"Porch"},{id:"map",name:"Map room"}],
+        { culprit:"quinn", location:"map" },
+        [
+          clue("f1","Rosa’s boots left a single trail to the porch and back.",{kind:"is",suspect:"rosa",location:"porch"}),
+          clue("f2","Nell brewed cocoa in the pantry.",{kind:"is",suspect:"nell",location:"pantry"}),
+          clue("f3","Peregrin’s cello was heard from the parlor.",{kind:"is",suspect:"peregrin",location:"parlor"}),
+          clue("f4","Quinn’s gloves carry blue chalk used only on the map-room table.",{kind:"not",suspect:"quinn",location:"porch"})
+        ],
+        "f4",
+        "The blue chalk betrayed Quinn’s quiet visit to the map room. The forged boundary map would have exposed the land scheme by morning."
+      ),
+      alibiCase(
+        4, "ember-theatre", "Final Curtain at the Ember Theatre", "hard",
+        "The leading actor collapses after the final bow. During the blackout, four members of the company moved through the old theatre’s hidden passages.",
+        [{id:"sana",name:"Sana Wren"},{id:"theo",name:"Theo March"},{id:"uma",name:"Uma Frost"},{id:"vic",name:"Victor Lane"}],
+        [{id:"foyer",name:"Foyer"},{id:"flies",name:"Fly loft"},{id:"wardrobe",name:"Wardrobe"},{id:"stage",name:"Stage"}],
+        { culprit:"sana", location:"stage" },
+        [
+          clue("e1","Victor’s torn cuff was caught in the fly-loft ladder.",{kind:"is",suspect:"vic",location:"flies"}),
+          clue("e2","Uma was changing a hem in wardrobe.",{kind:"is",suspect:"uma",location:"wardrobe"}),
+          clue("e3","Theo greeted patrons in the foyer.",{kind:"is",suspect:"theo",location:"foyer"}),
+          clue("e4","Sana’s prop key opens the stage trap.",{kind:"not",suspect:"sana",location:"foyer"})
+        ],
+        "e4",
+        "Sana used the prop key to rise through the stage trap unseen. The rewritten contract in the actor’s pocket supplied the motive."
+      ),
+
+      makeLieCase(
+        5, "greenhouse-confession", "The Greenhouse Confession", "easy",
+        "A rare orchid breeder dies among the moonflowers. Four heirs give tidy statements, but the gardener confirms the exact number of lies.",
+        [{id:"alba",name:"Alba Snow"},{id:"ben",name:"Ben Alder"},{id:"cora",name:"Cora June"},{id:"dane",name:"Dane Holt"}],
+        "ben", "The truth pattern leaves Ben’s denial as the decisive falsehood.",
+        "Ben’s denial was the one statement the others could not support. The missing orchid ledger was found folded inside his seed catalogue."
+      ),
+      makeLieCase(
+        6, "clockmakers-customer", "The Clockmaker’s Last Customer", "medium",
+        "At six precisely, every clock in Orison’s shop stops. The four customers remember the moment differently; only one truth pattern fits.",
+        [{id:"esme",name:"Esme Rook"},{id:"felix",name:"Felix Dawn"},{id:"gia",name:"Gia North"},{id:"hugo",name:"Hugo Bell"}],
+        "gia", "Gia’s statement conflicts with the only possible liar count.",
+        "Gia had wound the display clock backward to manufacture an alibi. A curl of fresh brass shaving clung to her glove."
+      ),
+      makeLieCase(
+        7, "lantern-festival", "Alibis Under the Lanterns", "medium",
+        "The festival treasurer is found behind the paper-lantern pavilion. Music, fireworks, and four overlapping stories obscure one careful lie.",
+        [{id:"iko",name:"Iko Fern"},{id:"june",name:"June Sol"},{id:"kit",name:"Kit Marlow"},{id:"lena",name:"Lena West"}],
+        "lena", "Lena’s claim is incompatible with the announced number of false statements.",
+        "Lena counted on the fireworks masking the pavilion bell. The treasurer’s ribbon seal was tucked into her lantern frame."
+      ),
+      makeLieCase(
+        8, "alder-library", "The Missing Page at Alder Library", "hard",
+        "A historian dies beside a mutilated folio. Four researchers each offer a precise accusation, and the old librarian knows how many are false.",
+        [{id:"mara",name:"Mara Quill"},{id:"niko",name:"Niko Reed"},{id:"opal",name:"Opal Byrne"},{id:"pax",name:"Pax Wood"}],
+        "mara", "Mara’s statement is the only one that makes the full truth count possible.",
+        "Mara removed the page that disproved her celebrated translation. Its watermark showed through the lining of her notebook."
+      ),
+
+      corkCase(
+        9, "final-portrait", "The Painter’s Final Portrait", "easy",
+        "A portraitist is found in a locked studio. The room is crowded with pigments, appointments, and one canvas painted over in haste.",
+        [{id:"rea",name:"Rea Bloom"},{id:"sol",name:"Sol Mercer"},{id:"tavi",name:"Tavi Green"},{id:"wynn",name:"Wynn Clay"}],
+        [
+          {id:"blue",text:"Wet blue pigment",initial:true},{id:"cuff",text:"Blue-stained cuff: Sol",initial:true},
+          {id:"diary",text:"Diary: secret 8pm sitting",initial:true},{id:"ticket",text:"Sol’s 8pm tram ticket",initial:true},
+          {id:"studio",text:"Sol was in the studio",proof:true},{id:"false",text:"The tram alibi was planted",proof:true},
+          {id:"final",text:"Sol painted over the portrait"}
+        ],
+        [
+          {a:"blue",b:"cuff",result:"studio",text:"The fresh pigment matches Sol’s cuff."},
+          {a:"diary",b:"ticket",result:"false",text:"The diary time makes the unused ticket an alibi, not a journey."},
+          {a:"studio",b:"false",result:"final",text:"Sol was present and prepared a false departure."}
+        ],
+        {culprit:"sol",proof:"studio"},
+        "Sol had painted over the portrait that revealed his forgery. The wet blue on his cuff placed him beside the unfinished canvas."
+      ),
+      corkCase(
+        10, "seaview-seven", "Room Seven at the Seaview Hotel", "medium",
+        "A travel writer never checks out of room seven. Salt air has blurred the footprints, but the hotel’s small objects remember.",
+        [{id:"bea",name:"Bea Coast"},{id:"cyr",name:"Cyril Moon"},{id:"della",name:"Della Shore"},{id:"eren",name:"Eren Tide"}],
+        [
+          {id:"key",text:"Duplicate room-seven key",initial:true},{id:"desk",text:"Key log signed by Della",initial:true},
+          {id:"tea",text:"Tea tray set for two",initial:true},{id:"note",text:"Writer’s note: “D at nine”",initial:true},
+          {id:"access",text:"Della had room access",proof:true},{id:"meeting",text:"Della met the writer",proof:true},
+          {id:"final",text:"Della entered room seven"}
+        ],
+        [
+          {a:"key",b:"desk",result:"access",text:"The duplicate key was issued under Della’s name."},
+          {a:"tea",b:"note",result:"meeting",text:"The second cup confirms the scheduled visitor arrived."},
+          {a:"access",b:"meeting",result:"final",text:"Della both arranged the meeting and could enter unseen."}
+        ],
+        {culprit:"della",proof:"access"},
+        "Della feared the writer’s next column would expose the hotel accounts. The duplicate key and second cup made her quiet visit impossible to deny."
+      ),
+      corkCase(
+        11, "last-radio-hour", "The Last Radio Hour", "medium",
+        "A beloved host falls silent during a live broadcast. In the control room, clipped wires and cue sheets tell a second story.",
+        [{id:"faye",name:"Faye Signal"},{id:"glen",name:"Glen Hart"},{id:"hana",name:"Hana Reed"},{id:"ivan",name:"Ivan Cross"}],
+        [
+          {id:"wire",text:"Precisely clipped microphone wire",initial:true},{id:"pliers",text:"Glen’s notched pliers",initial:true},
+          {id:"cue",text:"Changed cue sheet",initial:true},{id:"ink",text:"Green ink on Glen’s hand",initial:true},
+          {id:"tool",text:"The pliers cut the wire",proof:true},{id:"edit",text:"Glen changed the cue",proof:true},
+          {id:"final",text:"Glen controlled the fatal silence"}
+        ],
+        [
+          {a:"wire",b:"pliers",result:"tool",text:"The cut carries the pliers’ distinctive notch."},
+          {a:"cue",b:"ink",result:"edit",text:"The alteration was made in Glen’s green ink."},
+          {a:"tool",b:"edit",result:"final",text:"The same person sabotaged both sound and schedule."}
+        ],
+        {culprit:"glen",proof:"tool"},
+        "Glen arranged a false silence to confront the host off-air. His notched pliers turned that plan into proof."
+      ),
+      corkCase(
+        12, "museum-closing", "The Museum After Closing", "hard",
+        "During a charity preview, the curator is found beneath the planetarium dome. The exhibits appear untouched—almost.",
+        [{id:"jora",name:"Jora Flint"},{id:"kas",name:"Kas Orion"},{id:"lumi",name:"Lumi Park"},{id:"milo",name:"Milo Voss"}],
+        [
+          {id:"dust",text:"Meteorite dust on a sleeve",initial:true},{id:"coat",text:"Milo’s checked coat",initial:true},
+          {id:"alarm",text:"Alarm bypass at 10:14",initial:true},{id:"card",text:"Milo’s access-card log",initial:true},
+          {id:"catalogue",text:"A forged meteorite catalogue",initial:true},{id:"debt",text:"Milo’s auction debt",initial:true},
+          {id:"touch",text:"Milo handled the meteorite",proof:true},{id:"entry",text:"Milo bypassed the alarm",proof:true},
+          {id:"motive",text:"Milo planned a substitution",proof:true},{id:"final",text:"Milo staged the untouched exhibit"}
+        ],
+        [
+          {a:"dust",b:"coat",result:"touch",text:"The rare dust is embedded in Milo’s sleeve."},
+          {a:"alarm",b:"card",result:"entry",text:"The bypass matches Milo’s access card."},
+          {a:"catalogue",b:"debt",result:"motive",text:"The forgery and debt point to a planned sale."},
+          {a:"touch",b:"entry",result:"final",text:"Milo handled the exhibit during the bypass."}
+        ],
+        {culprit:"milo",proof:"entry"},
+        "Milo planned to replace the meteorite with a replica after the preview. Dust, access logs, and the forged catalogue closed the circle."
+      )
+    ];
+
+    function hashString(text) {
+      let h = 2166136261 >>> 0;
+      for (let i = 0; i < text.length; i++) {
+        h ^= text.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    }
+    function rngFor(seed) {
+      let a = hashString(seed) || 1;
+      return function() {
+        a += 0x6D2B79F5;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    function shuffled(list, rng) {
+      const out = list.slice();
+      for (let i = out.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [out[i], out[j]] = [out[j], out[i]];
+      }
+      return out;
+    }
+    function pick(list, rng) { return list[Math.floor(rng() * list.length)]; }
+
+    const NAME_POOL = ["Ari Moss","Bea Wren","Cleo Hart","Dax Reed","Eli Vale","Fia North","Gus Bell","Hope Lane","Ira Snow","Juno Pike","Kian Wood","Luz Finch"];
+    const LOC_POOL = ["Pantry","Library","Garden","Study","Gallery","Lounge","Terrace","Workshop"];
+    const OBJ_POOL = ["brass key","torn receipt","blue thread","wax seal","silver pencil","pressed flower","tram stub","green ribbon"];
+
+    function generatedAlibi(seed, difficulty) {
+      const rng = rngFor(seed);
+      const count = difficulty === "hard" ? 6 : difficulty === "medium" ? 5 : 4;
+      const suspects = shuffled(NAME_POOL, rng).slice(0, count).map((name, i) => ({id:`p${i}`,name}));
+      const locations = shuffled(LOC_POOL, rng).slice(0, count).map((name, i) => ({id:`l${i}`,name}));
+      const assigned = shuffled(locations.map((l) => l.id), rng);
+      const crimeAt = assigned[Math.floor(rng() * assigned.length)];
+      const clues = suspects.slice(0, count - 1).map((s, i) =>
+        clue(`g${i}`, `${s.name} left a clear trace in the ${locations.find((l) => l.id === assigned[i]).name.toLowerCase()}.`,
+          {kind:"is",suspect:s.id,location:assigned[i]})
+      );
+      const culprit = suspects[assigned.indexOf(crimeAt)].id;
+      return alibiCase(
+        null, null, `The ${pick(["Amber","Ivory","Midnight","Winter"],rng)} House File`, difficulty,
+        `A quiet gathering ends with a locked-room death. ${count} guests were in ${count} different places; the household traces are still fresh.`,
+        suspects, locations, {culprit,location:crimeAt}, clues, clues[clues.length - 1].id,
+        `${suspects.find((s)=>s.id===culprit).name} was the only guest left at the scene. The small traces elsewhere made the alibi map complete.`
+      );
+    }
+
+    function generatedLies(seed, difficulty) {
+      const rng = rngFor(seed);
+      const suspects = shuffled(NAME_POOL, rng).slice(0, 4).map((name, i) => ({id:`p${i}`,name}));
+      const culprit = pick(suspects, rng).id;
+      return makeLieCase(
+        null, null, `Statements at ${pick(["Rose Cottage","Moth Hall","Juniper House","the Old Mill"],rng)}`,
+        difficulty,
+        "A private supper ends in a carefully arranged crime. The witnesses agree on how many statements are false—but not on anything else.",
+        suspects, culprit, "Only one truth pattern matches the witness rule.",
+        `${suspects.find((s)=>s.id===culprit).name} could not make the statements fit any other way. The false account exposed the planned alibi.`
+      );
+    }
+
+    function generatedCork(seed, difficulty) {
+      const rng = rngFor(seed);
+      const suspects = shuffled(NAME_POOL, rng).slice(0, 4).map((name, i) => ({id:`p${i}`,name}));
+      const culprit = pick(suspects, rng);
+      const object = pick(OBJ_POOL, rng);
+      const place = pick(LOC_POOL, rng);
+      const decoys = difficulty === "hard"
+        ? [{id:"decoy1",text:"A stopped pocket watch",initial:true},{id:"decoy2",text:"A rain-spotted programme",initial:true}]
+        : difficulty === "medium" ? [{id:"decoy1",text:"A stopped pocket watch",initial:true}] : [];
+      return corkCase(
+        null, null, `The ${object.replace(/\b\w/g,(m)=>m.toUpperCase())}`, difficulty,
+        `A collector is found dead after a small evening reception. An ordinary ${object} and a quiet visit to the ${place.toLowerCase()} matter more than they first appear.`,
+        suspects,
+        [
+          {id:"object",text:`A ${object}`,initial:true},{id:"mark",text:`Matching mark on ${culprit.name}`,initial:true},
+          {id:"visit",text:`A note naming the ${place}`,initial:true},{id:"trace",text:`${culprit.name} carried a ${place.toLowerCase()} trace`,initial:true},
+          {id:"match",text:`The ${object} belongs to ${culprit.name}`,proof:true},{id:"present",text:`${culprit.name} visited the ${place}`,proof:true},
+          {id:"final",text:`${culprit.name} arranged the scene`}
+        ].concat(decoys),
+        [
+          {a:"object",b:"mark",result:"match",text:"The marks make a direct match."},
+          {a:"visit",b:"trace",result:"present",text:"The note and trace establish the visit."},
+          {a:"match",b:"present",result:"final",text:"Possession and presence complete the deduction."}
+        ],
+        {culprit:culprit.id,proof:"match"},
+        `${culprit.name} left both the ${object} and a trace from the ${place.toLowerCase()}. Together they made the staged alibi collapse.`
+      );
+    }
+
+    function generateCase(type, seed, difficulty) {
+      for (let attempt = 0; attempt < 24; attempt++) {
+        try {
+          const sourceSeed = attempt ? `${seed}:${attempt}` : seed;
+          const c = type === "alibi" ? generatedAlibi(sourceSeed,difficulty)
+            : type === "lies" ? generatedLies(sourceSeed,difficulty)
+            : generatedCork(sourceSeed,difficulty);
+          c.generated = true;
+          c.seed = seed;
+          c.slug = `${type}.${seed}`;
+          validateCase(c);
+          return c;
+        } catch {
+          // Try another deterministic branch of the same public seed.
+        }
+      }
+      throw new Error("Could not generate a unique case");
+    }
+
+    function permutations(items) {
+      if (items.length < 2) return [items.slice()];
+      const out = [];
+      items.forEach((item, i) => {
+        const rest = items.slice(0,i).concat(items.slice(i+1));
+        permutations(rest).forEach((p) => out.push([item].concat(p)));
+      });
+      return out;
+    }
+    function alibiSolutions(c) {
+      const locs = c.locations.map((l) => l.id);
+      const out = [];
+      for (const perm of permutations(locs)) {
+        const map = Object.fromEntries(c.suspects.map((s,i) => [s.id,perm[i]]));
+        const valid = c.clues.every((x) =>
+          x.kind === "is" ? map[x.suspect] === x.location
+            : x.kind === "not" ? map[x.suspect] !== x.location
+              : true
+        );
+        if (valid) out.push(map);
+      }
+      return out;
+    }
+    function lieWorlds(c) {
+      return c.suspects.map((s) => {
+        const truths = c.statements.map((x) => evalPredicate(x.predicate, s.id));
+        return { culprit:s.id, truths };
+      }).filter((w) => w.truths.filter((v) => !v).length === c.falseCount);
+    }
+    function reachableCork(c) {
+      const have = new Set(c.nodes.filter((n) => n.initial).map((n) => n.id));
+      let changed = true;
+      while (changed) {
+        changed = false;
+        c.links.forEach((l) => {
+          if (have.has(l.a) && have.has(l.b) && !have.has(l.result)) {
+            have.add(l.result);
+            changed = true;
+          }
+        });
+      }
+      return have;
+    }
+    function validateCase(c) {
+      const ids = new Set(c.suspects.map((s) => s.id));
+      if (!ids.has(c.solution.culprit)) throw new Error(`Invalid culprit: ${c.title}`);
+      if (!c.proofs.some((p) => p.id === c.solution.proof)) throw new Error(`Invalid proof: ${c.title}`);
+      if (c.type === "alibi") {
+        const worlds = alibiSolutions(c);
+        if (worlds.length !== 1) throw new Error(`Alibi case is not unique (${worlds.length}): ${c.title}`);
+        const culprit = c.suspects.find((s) => worlds[0][s.id] === c.crimeLocation).id;
+        if (culprit !== c.solution.culprit) throw new Error(`Wrong alibi solution: ${c.title}`);
+      } else if (c.type === "lies") {
+        const worlds = lieWorlds(c);
+        if (worlds.length !== 1 || worlds[0].culprit !== c.solution.culprit) {
+          throw new Error(`Lie case is not unique: ${c.title}`);
+        }
+      } else {
+        const reachable = reachableCork(c);
+        c.links.forEach((l) => {
+          if (!c.nodes.some((n) => n.id === l.result)) throw new Error(`Missing cork result: ${c.title}`);
+        });
+        if (!reachable.has("final")) throw new Error(`Unreachable cork conclusion: ${c.title}`);
+      }
+      return true;
+    }
+    AUTHORED.forEach(validateCase);
+
+    const els = {
+      app: document.getElementById("app"),
+      timer: document.getElementById("timer"),
+      caseLabel: document.getElementById("caseLabel"),
+      difficulty: document.getElementById("difficulty"),
+      caseType: document.getElementById("caseType"),
+      caseTitle: document.getElementById("caseTitle"),
+      prologue: document.getElementById("prologue"),
+      evidenceTab: document.getElementById("evidenceTab"),
+      notebookTab: document.getElementById("notebookTab"),
+      evidencePanel: document.getElementById("evidencePanel"),
+      notebookPanel: document.getElementById("notebookPanel"),
+      status: document.getElementById("status"),
+      check: document.getElementById("checkBtn"),
+      hint: document.getElementById("hintBtn"),
+      reset: document.getElementById("resetBtn"),
+      accuse: document.getElementById("accuseBtn")
+    };
+    const sheets = {
+      picker: document.getElementById("pickerSheet"),
+      rules: document.getElementById("rulesSheet"),
+      stats: document.getElementById("statsSheet"),
+      accuse: document.getElementById("accuseSheet"),
+      win: document.getElementById("winSheet")
+    };
+
+    let current = AUTHORED[0];
+    let currentIndex = 0;
+    let mode = "authored";
+    let pickerMode = "authored";
+    let pickerType = "alibi";
+    let generatedDifficulty = "easy";
+    let state = {};
+    let pendingHint = null;
+    let won = false;
+    let elapsedMs = 0;
+    let runningSince = null;
+    let tick = null;
+    let lastFocus = null;
+    let syncingHash = false;
+
+    function caseKey(c = current) {
+      return c.generated ? `g:${c.type}:${c.seed}` : `c:${c.id}`;
+    }
+    function defaultState(c) {
+      if (c.type === "alibi") return { marks:{}, tab:"evidence" };
+      if (c.type === "lies") return { marks:{}, tab:"evidence" };
+      return { unlocked:c.nodes.filter((n)=>n.initial).map((n)=>n.id), selected:[], linked:[], tab:"evidence" };
+    }
+    function normalizeProgress(raw) {
+      const p = raw && typeof raw === "object" ? raw : {};
+      return {
+        version: STORAGE_VERSION,
+        completed: Array.isArray(p.completed) ? p.completed : [],
+        generatedHistory: Array.isArray(p.generatedHistory) ? p.generatedHistory.slice(0,20) : [],
+        records: p.records && typeof p.records === "object" ? p.records : {},
+        stats: {
+          wins:Number(p.stats?.wins)||0, generatedWins:Number(p.stats?.generatedWins)||0,
+          hints:Number(p.stats?.hints)||0, checks:Number(p.stats?.checks)||0,
+          misses:Number(p.stats?.misses)||0, totalMs:Number(p.stats?.totalMs)||0,
+          timedWins:Number(p.stats?.timedWins)||0, bestMs:Number(p.stats?.bestMs)||0
+        },
+        snapshot: p.snapshot && typeof p.snapshot === "object" ? p.snapshot : null,
+        lastAuthored:Number(p.lastAuthored)||1,
+        generatedDifficulty:DIFFS.includes(p.generatedDifficulty)?p.generatedDifficulty:"easy"
+      };
+    }
+    function loadProgress() {
+      try { return normalizeProgress(JSON.parse(localStorage.getItem(STORAGE_KEY))); }
+      catch { return normalizeProgress({}); }
+    }
+    function saveProgress(patch) {
+      const p = loadProgress();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({...p,...patch,version:STORAGE_VERSION}));
+    }
+    function pruneRecords(records) {
+      const authored = [], generated = [];
+      Object.entries(records).forEach((entry) => (entry[0].startsWith("c:") ? authored : generated).push(entry));
+      generated.sort((a,b)=>(b[1].lastPlayedMs||0)-(a[1].lastPlayedMs||0));
+      return Object.fromEntries(authored.concat(generated.slice(0,GENERATED_RECORD_CAP)));
+    }
+    function touchRecord(patch = {}) {
+      const p = loadProgress();
+      const key = caseKey();
+      const prev = p.records[key] || {};
+      const now = Date.now();
+      p.records[key] = {
+        status:"started", firstStartedMs:prev.firstStartedMs||now, ...prev,
+        ...patch, lastPlayedMs:now
+      };
+      p.records = pruneRecords(p.records);
+      saveProgress({records:p.records});
+    }
+    function persistSnapshot() {
+      const elapsed = currentElapsed();
+      if (runningSince && !won) {
+        elapsedMs = elapsed;
+        runningSince = Date.now();
+      }
+      saveProgress({snapshot:{
+        key:caseKey(), state, pendingHint, won, elapsedMs:elapsed,
+        runningSince:won?null:runningSince
+      }});
+    }
+
+    function formatTime(ms) {
+      const total = Math.max(0,Math.floor(ms/1000));
+      const h = Math.floor(total/3600);
+      const m = Math.floor((total%3600)/60);
+      const s = total%60;
+      return h ? `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}` : `${m}:${String(s).padStart(2,"0")}`;
+    }
+    function currentElapsed() { return elapsedMs + (runningSince && !won ? Math.max(0,Date.now()-runningSince) : 0); }
+    function renderTimer() { els.timer.textContent = formatTime(currentElapsed()); }
+    function startTick() {
+      clearInterval(tick);
+      renderTimer();
+      if (!won) tick = setInterval(renderTimer,250);
+    }
+    function beginTimer() { elapsedMs=0; runningSince=Date.now(); won=false; startTick(); }
+    function freezeTimer() {
+      elapsedMs=currentElapsed(); runningSince=null; clearInterval(tick); tick=null; renderTimer();
+    }
+
+    function setStatus(text, kind) {
+      els.status.textContent = text;
+      els.status.className = "status" + (kind ? ` ${kind}` : "");
+    }
+    function switchTab(name) {
+      state.tab = name;
+      const evidence = name === "evidence";
+      els.evidenceTab.setAttribute("aria-selected",String(evidence));
+      els.notebookTab.setAttribute("aria-selected",String(!evidence));
+      els.evidencePanel.hidden = !evidence;
+      els.notebookPanel.hidden = evidence;
+      persistSnapshot();
+    }
+    function suspectName(id) { return current.suspects.find((s)=>s.id===id)?.name || id; }
+
+    function renderEvidence() {
+      if (current.type === "alibi") {
+        els.evidencePanel.innerHTML = `<h3 class="section-title">Witnesses and traces</h3><div class="clues">${
+          current.clues.map((c)=>`<div class="clue" data-clue="${c.id}"><strong>Evidence ${c.id.replace(/\D/g,"")||"•"}</strong><br>${c.text}</div>`).join("")
+        }</div>`;
+      } else if (current.type === "lies") {
+        els.evidencePanel.innerHTML = `<p class="rule-note">${current.lieRule}</p><div class="statements">${
+          current.statements.map((s)=>`<div class="clue" data-clue="${s.id}"><strong>${s.speaker}</strong><br>“${s.text}”</div>`).join("")
+        }</div>`;
+      } else {
+        els.evidencePanel.innerHTML = `<p class="rule-note">Select two unlocked pins in the Notebook, then connect them to test a deduction.</p><div class="clues">${
+          current.nodes.filter((n)=>n.initial).map((n)=>`<div class="clue">${n.text}</div>`).join("")
+        }</div>`;
+      }
+    }
+
+    function markKey(suspect,location) { return `${suspect}|${location}`; }
+    function cycleGridMark(suspect,location) {
+      const key=markKey(suspect,location);
+      const cur=state.marks[key]||"unknown";
+      state.marks[key]=cur==="unknown"?"no":cur==="no"?"yes":"unknown";
+      renderNotebook(); persistSnapshot();
+    }
+    function renderAlibi() {
+      const cols=current.locations.length+1;
+      let html=`<p class="rule-note">Each person was in one different location. Tap cells: blank → × → ✓.</p><div class="grid-wrap"><div class="logic-grid" style="grid-template-columns: minmax(95px,1.3fr) repeat(${current.locations.length},1fr)">`;
+      html+=`<div></div>${current.locations.map((l)=>`<div class="grid-label">${l.name}</div>`).join("")}`;
+      current.suspects.forEach((s)=>{
+        html+=`<div class="grid-label row">${s.name}</div>`;
+        current.locations.forEach((l)=>{
+          const key=markKey(s.id,l.id), mark=state.marks[key]||"unknown";
+          const hinted=pendingHint?.kind==="alibi"&&pendingHint.key===key;
+          html+=`<button type="button" class="grid-btn${hinted?" hint":""}" data-suspect="${s.id}" data-location="${l.id}" data-mark="${mark}" aria-label="${s.name}, ${l.name}: ${mark}">${mark==="no"?"×":mark==="yes"?"✓":""}</button>`;
+        });
+      });
+      html+=`</div></div>`;
+      els.notebookPanel.innerHTML=html;
+      els.notebookPanel.querySelectorAll(".grid-btn").forEach((b)=>b.addEventListener("click",()=>cycleGridMark(b.dataset.suspect,b.dataset.location)));
+    }
+    function cycleStatement(id) {
+      const cur=state.marks[id]||"unknown";
+      state.marks[id]=cur==="unknown"?"true":cur==="true"?"false":"unknown";
+      renderNotebook(); persistSnapshot();
+    }
+    function renderLies() {
+      els.notebookPanel.innerHTML=`<p class="rule-note">${current.lieRule} Tap each claim: unknown → true → false.</p><div class="statements">${
+        current.statements.map((s)=>{
+          const mark=state.marks[s.id]||"unknown";
+          const hinted=pendingHint?.kind==="lies"&&pendingHint.id===s.id;
+          return `<button type="button" class="statement${hinted?" hint":""}" data-id="${s.id}" data-mark="${mark}"><strong>${s.speaker}</strong><br>${s.text}<br><small>${mark==="unknown"?"Unknown":mark==="true"?"Marked true":"Marked false"}</small></button>`;
+        }).join("")
+      }</div>`;
+      els.notebookPanel.querySelectorAll(".statement").forEach((b)=>b.addEventListener("click",()=>cycleStatement(b.dataset.id)));
+    }
+    function pairKey(a,b) { return [a,b].sort().join("|"); }
+    function selectPin(id) {
+      if (!state.unlocked.includes(id)) return;
+      const pos=state.selected.indexOf(id);
+      if (pos>=0) state.selected.splice(pos,1);
+      else if (state.selected.length<2) state.selected.push(id);
+      else state.selected=[state.selected[1],id];
+      renderNotebook(); persistSnapshot();
+    }
+    function linkPins() {
+      if (state.selected.length!==2) { setStatus("Select two evidence pins first.","bad"); return; }
+      const key=pairKey(...state.selected);
+      const link=current.links.find((l)=>pairKey(l.a,l.b)===key);
+      if (!link || !state.unlocked.includes(link.a) || !state.unlocked.includes(link.b)) {
+        setStatus("Those facts do not form a sound deduction.","bad");
+        return;
+      }
+      if (!state.unlocked.includes(link.result)) state.unlocked.push(link.result);
+      if (!state.linked.includes(key)) state.linked.push(key);
+      state.selected=[];
+      renderNotebook(); persistSnapshot();
+      setStatus(link.text,"good");
+    }
+    function renderCork() {
+      const nodes=current.nodes.filter((n)=>state.unlocked.includes(n.id));
+      els.notebookPanel.innerHTML=`<div class="pin-board">${
+        nodes.map((n)=>{
+          const selected=state.selected.includes(n.id);
+          const hinted=pendingHint?.kind==="cork"&&(pendingHint.ids||[]).includes(n.id);
+          return `<button type="button" class="pin${selected?" selected":""}${hinted?" hint":""}" data-id="${n.id}">${n.text}</button>`;
+        }).join("")
+      }</div><div class="link-actions"><button type="button" class="primary" id="linkPins">Connect evidence</button><button type="button" id="clearPins">Clear selection</button></div><h3 class="section-title" style="margin-top:14px">Deductions</h3><div class="deductions">${
+        current.links.filter((l)=>state.linked.includes(pairKey(l.a,l.b))).map((l)=>`<div class="deduction">${l.text}</div>`).join("") || `<div class="deduction">No deductions yet.</div>`
+      }</div>`;
+      els.notebookPanel.querySelectorAll(".pin").forEach((b)=>b.addEventListener("click",()=>selectPin(b.dataset.id)));
+      document.getElementById("linkPins").addEventListener("click",linkPins);
+      document.getElementById("clearPins").addEventListener("click",()=>{state.selected=[];renderNotebook();persistSnapshot();});
+    }
+    function renderNotebook() {
+      if (current.type==="alibi") renderAlibi();
+      else if (current.type==="lies") renderLies();
+      else renderCork();
+    }
+
+    function remainingAlibiWorlds() {
+      return alibiSolutions(current).filter((world)=>current.suspects.every((s)=>current.locations.every((l)=>{
+        const mark=state.marks[markKey(s.id,l.id)]||"unknown";
+        return mark==="unknown" || (mark==="yes" ? world[s.id]===l.id : world[s.id]!==l.id);
+      })));
+    }
+    function remainingLieWorlds() {
+      return lieWorlds(current).filter((world)=>current.statements.every((s,i)=>{
+        const mark=state.marks[s.id]||"unknown";
+        return mark==="unknown" || (mark==="true")===world.truths[i];
+      }));
+    }
+    function checkCase() {
+      const p=loadProgress(); p.stats.checks+=1; saveProgress({stats:p.stats});
+      let ok=true, complete=false;
+      if (current.type==="alibi") {
+        const worlds=remainingAlibiWorlds(); ok=worlds.length>0;
+        complete=ok && current.suspects.every((s)=>current.locations.some((l)=>state.marks[markKey(s.id,l.id)]==="yes"));
+      } else if (current.type==="lies") {
+        const worlds=remainingLieWorlds(); ok=worlds.length>0;
+        complete=ok && current.statements.every((s)=>state.marks[s.id]&&state.marks[s.id]!=="unknown");
+      } else {
+        complete=state.unlocked.includes("final");
+      }
+      renderStats();
+      if (!ok) setStatus("Some notes contradict the evidence. Revisit the highlighted logic.","bad");
+      else if (complete) setStatus("Your notebook is consistent. You are ready to accuse.","good");
+      else setStatus("No contradictions so far. More deductions remain.");
+    }
+
+    function nextHint() {
+      if (current.type==="alibi") {
+        const worlds=remainingAlibiWorlds();
+        if (!worlds.length) return {kind:"message",text:"Your current marks contradict the evidence. Clear one before continuing."};
+        for (const s of current.suspects) for (const l of current.locations) {
+          const key=markKey(s.id,l.id);
+          if ((state.marks[key]||"unknown")!=="unknown") continue;
+          const vals=new Set(worlds.map((w)=>w[s.id]===l.id));
+          if (vals.size===1) {
+            const yes=[...vals][0];
+            return {kind:"alibi",key,value:yes?"yes":"no",text:`The remaining alibis force ${s.name} ${yes?"into":"away from"} the ${l.name}.`};
+          }
+        }
+      } else if (current.type==="lies") {
+        const worlds=remainingLieWorlds();
+        if (!worlds.length) return {kind:"message",text:"Those truth marks cannot satisfy the witness rule."};
+        for (let i=0;i<current.statements.length;i++) {
+          const s=current.statements[i];
+          if ((state.marks[s.id]||"unknown")!=="unknown") continue;
+          const vals=new Set(worlds.map((w)=>w.truths[i]));
+          if (vals.size===1) {
+            const truth=[...vals][0];
+            return {kind:"lies",id:s.id,value:truth?"true":"false",text:`To keep exactly ${current.falseCount} false, ${s.speaker}’s statement must be ${truth?"true":"false"}.`};
+          }
+        }
+      } else {
+        const link=current.links.find((l)=>state.unlocked.includes(l.a)&&state.unlocked.includes(l.b)&&!state.unlocked.includes(l.result));
+        if (link) return {kind:"cork",ids:[link.a,link.b],value:pairKey(link.a,link.b),text:`Connect “${current.nodes.find((n)=>n.id===link.a).text}” with “${current.nodes.find((n)=>n.id===link.b).text}”.`};
+      }
+      return {kind:"message",text:"No single forced step is available yet. Review the evidence."};
+    }
+    function hintFollowed(h) {
+      if (!h) return true;
+      if (h.kind==="message") return h.signature !== JSON.stringify(state);
+      if (h.kind==="alibi") return state.marks[h.key]===h.value;
+      if (h.kind==="lies") return state.marks[h.id]===h.value;
+      return state.linked.includes(h.value);
+    }
+    function useHint() {
+      if (won) return;
+      if (pendingHint && !hintFollowed(pendingHint)) {
+        renderNotebook(); switchTab("notebook"); setStatus(pendingHint.text); return;
+      }
+      pendingHint=nextHint();
+      if (pendingHint.kind==="message") pendingHint.signature=JSON.stringify(state);
+      const p=loadProgress(); p.stats.hints+=1;
+      const key=caseKey(), rec=p.records[key]||{}; p.records[key]={...rec,hints:(rec.hints||0)+1,lastPlayedMs:Date.now()};
+      saveProgress({stats:p.stats,records:pruneRecords(p.records)});
+      renderNotebook(); switchTab("notebook"); setStatus(pendingHint.text);
+    }
+
+    function openAccuse() {
+      const culprit=document.getElementById("culpritSelect");
+      const proof=document.getElementById("proofSelect");
+      culprit.innerHTML=`<option value="">Choose a suspect…</option>${current.suspects.map((s)=>`<option value="${s.id}">${s.name}</option>`).join("")}`;
+      proof.innerHTML=`<option value="">Choose the decisive proof…</option>${current.proofs.map((p)=>`<option value="${p.id}">${p.text}</option>`).join("")}`;
+      openSheet(sheets.accuse);
+    }
+    function submitAccusation() {
+      const culprit=document.getElementById("culpritSelect").value;
+      const proof=document.getElementById("proofSelect").value;
+      if (!culprit||!proof) { setStatus("Choose both a culprit and decisive proof.","bad"); return; }
+      if (culprit!==current.solution.culprit||proof!==current.solution.proof) {
+        const p=loadProgress(); p.stats.misses+=1;
+        const key=caseKey(), rec=p.records[key]||{}; p.records[key]={...rec,misses:(rec.misses||0)+1,lastPlayedMs:Date.now()};
+        saveProgress({stats:p.stats,records:pruneRecords(p.records)});
+        closeSheet(sheets.accuse); renderStats();
+        setStatus("That accusation does not fit every clue. Keep investigating.","bad");
+        return;
+      }
+      closeSheet(sheets.accuse); solveCase();
+    }
+    function solveCase() {
+      if (won) return;
+      freezeTimer(); won=true; els.hint.disabled=true;
+      const ms=elapsedMs, p=loadProgress(), key=caseKey(), prev=p.records[key]||{};
+      p.stats.wins+=1; p.stats.totalMs+=ms; p.stats.timedWins+=1;
+      if (!p.stats.bestMs||ms<p.stats.bestMs) p.stats.bestMs=ms;
+      if (current.generated) p.stats.generatedWins+=1;
+      else if (!p.completed.includes(current.id)) p.completed.push(current.id);
+      p.records[key]={...prev,status:"completed",lastMs:ms,bestMs:prev.bestMs?Math.min(prev.bestMs,ms):ms,lastPlayedMs:Date.now()};
+      saveProgress({stats:p.stats,completed:p.completed,records:pruneRecords(p.records),snapshot:{key,state,won:true,elapsedMs:ms,runningSince:null}});
+      document.getElementById("epilogue").textContent=current.epilogue;
+      document.getElementById("winTime").textContent=`Solved in ${formatTime(ms)}.`;
+      renderStats(); openSheet(sheets.win); setStatus("Case closed.","good");
+    }
+
+    function renderStats() {
+      const p=loadProgress(), s=p.stats, rec=p.records[caseKey()]||{};
+      document.getElementById("statAuthored").textContent=String(p.completed.length);
+      document.getElementById("statGenerated").textContent=String(s.generatedWins);
+      document.getElementById("statWins").textContent=String(s.wins);
+      document.getElementById("statHints").textContent=String(s.hints);
+      document.getElementById("statChecks").textContent=String(s.checks);
+      document.getElementById("statMisses").textContent=String(s.misses);
+      document.getElementById("statBest").textContent=s.bestMs?formatTime(s.bestMs):"—";
+      document.getElementById("statAvg").textContent=s.timedWins?formatTime(s.totalMs/s.timedWins):"—";
+      const bits=[rec.status||"not started"];
+      if (rec.bestMs) bits.push(`best ${formatTime(rec.bestMs)}`);
+      if (rec.hints) bits.push(`${rec.hints} hint${rec.hints===1?"":"s"}`);
+      document.getElementById("caseStat").textContent=`This case: ${bits.join(" · ")}`;
+    }
+
+    function syncFragment() {
+      const value=current.generated?`#g.${current.type}.${current.seed}`:`#c.${current.slug}`;
+      if (location.hash===value||syncingHash) return;
+      syncingHash=true; history.replaceState(null,"",value); syncingHash=false;
+    }
+    function loadCase(c, opts={}) {
+      current=c; mode=c.generated?"generated":"authored";
+      currentIndex=c.generated?-1:AUTHORED.indexOf(c);
+      pendingHint=null;
+      const p=loadProgress(), snap=p.snapshot;
+      if (!c.generated) saveProgress({lastAuthored:c.id});
+      if (opts.restore&&snap&&snap.key===caseKey()) {
+        state=snap.state||defaultState(c); pendingHint=snap.pendingHint||null; won=!!snap.won; elapsedMs=Number(snap.elapsedMs)||0;
+        if (!won&&snap.runningSince) elapsedMs+=Math.max(0,Date.now()-Number(snap.runningSince));
+        runningSince=won?null:Date.now();
+      } else {
+        state=defaultState(c); beginTimer();
+      }
+      if (opts.restore) startTick();
+      els.caseLabel.textContent=c.generated?"Generated":`Case ${c.id}`;
+      els.difficulty.textContent=c.difficulty; els.difficulty.className=`diff ${c.difficulty}`;
+      els.caseType.textContent=TYPE_LABEL[c.type]; els.caseTitle.textContent=c.title; els.prologue.textContent=c.prologue;
+      els.hint.disabled=won; renderEvidence(); renderNotebook(); switchTab(state.tab||"evidence");
+      syncFragment(); touchRecord(); renderStats(); persistSnapshot();
+      setStatus(
+        won ? "Case closed. Review your deductions." : pendingHint?.text || "Read the evidence, then open your notebook.",
+        won ? "good" : undefined
+      );
+    }
+    function openFromHash(restore=false) {
+      const h=location.hash;
+      if (h.startsWith("#c.")) {
+        const c=AUTHORED.find((x)=>x.slug===h.slice(3));
+        if (c) { loadCase(c,{restore}); return true; }
+      }
+      if (h.startsWith("#g.")) {
+        const parts=h.slice(3).split(".");
+        if (TYPES.includes(parts[0])&&parts[1]) {
+          const seed=parts.slice(1).join(".");
+          const prefix=seed.split("-")[0];
+          const diff=DIFFS.includes(prefix)?prefix:loadProgress().generatedDifficulty;
+          const c=generateCase(parts[0],seed,diff);
+          validateCase(c); loadCase(c,{restore}); return true;
+        }
+      }
+      return false;
+    }
+
+    function renderPicker() {
+      document.querySelectorAll("#modeChips .chip").forEach((b)=>b.classList.toggle("on",b.dataset.mode===pickerMode));
+      document.querySelectorAll("#typeChips .chip").forEach((b)=>b.classList.toggle("on",b.dataset.type===pickerType));
+      document.querySelectorAll("#difficultyChips .chip").forEach((b)=>b.classList.toggle("on",b.dataset.diff===generatedDifficulty));
+      document.getElementById("difficultyChips").hidden=pickerMode!=="generated";
+      document.getElementById("newGenerated").hidden=pickerMode!=="generated";
+      const list=document.getElementById("caseList"), p=loadProgress();
+      if (pickerMode==="generated") {
+        list.innerHTML=`<p class="rule-note">Fresh cases are built from a shareable seed and checked for one solution.</p>`;
+      } else {
+        list.innerHTML=AUTHORED.filter((c)=>c.type===pickerType).map((c)=>`<button type="button" class="case-choice${p.completed.includes(c.id)?" done":""}" data-id="${c.id}"><span><strong>${c.title}</strong><small>${c.difficulty} · ${TYPE_LABEL[c.type]}</small></span></button>`).join("");
+        list.querySelectorAll(".case-choice").forEach((b)=>b.addEventListener("click",()=>{closeSheet(sheets.picker);loadCase(AUTHORED.find((c)=>c.id===Number(b.dataset.id)));}));
+      }
+    }
+    function randomSeed() { return `${generatedDifficulty}-${Date.now().toString(36)}${Math.floor(Math.random()*1e6).toString(36)}`; }
+    function newGenerated() {
+      const seed=randomSeed(), c=generateCase(pickerType,seed,generatedDifficulty);
+      validateCase(c);
+      const p=loadProgress(), entry={type:pickerType,seed,difficulty:generatedDifficulty,lastPlayedMs:Date.now()};
+      p.generatedHistory=[entry,...p.generatedHistory.filter((x)=>x.seed!==seed)].slice(0,20);
+      saveProgress({generatedHistory:p.generatedHistory,generatedDifficulty});
+      closeSheet(sheets.picker); loadCase(c);
+    }
+
+    function openSheet(sheet) {
+      lastFocus=document.activeElement;
+      Object.values(sheets).forEach((s)=>{if(s!==sheet)s.hidden=true;});
+      sheet.hidden=false; els.app.inert=true;
+      requestAnimationFrame(()=>sheet.querySelector(".sheet-card")?.focus());
+    }
+    function closeSheet(sheet) {
+      sheet.hidden=true; els.app.inert=false;
+      if (lastFocus&&document.contains(lastFocus)) lastFocus.focus();
+    }
+    function closeTopSheet() {
+      const open=Object.values(sheets).find((s)=>!s.hidden);
+      if (open&&open!==sheets.win) closeSheet(open);
+    }
+
+    els.evidenceTab.addEventListener("click",()=>switchTab("evidence"));
+    els.notebookTab.addEventListener("click",()=>switchTab("notebook"));
+    els.check.addEventListener("click",checkCase);
+    els.hint.addEventListener("click",useHint);
+    els.reset.addEventListener("click",()=>{
+      state=defaultState(current); pendingHint=null; renderNotebook(); switchTab("evidence"); persistSnapshot();
+      const p=loadProgress(), rec=p.records[caseKey()]||{}; p.records[caseKey()]={...rec,resets:(rec.resets||0)+1,lastPlayedMs:Date.now()}; saveProgress({records:p.records});
+      setStatus("Notebook reset. The timer is still running.");
+    });
+    els.accuse.addEventListener("click",openAccuse);
+    document.getElementById("openPicker").addEventListener("click",()=>{pickerMode=mode;pickerType=current.type;renderPicker();openSheet(sheets.picker);});
+    document.getElementById("openRules").addEventListener("click",()=>openSheet(sheets.rules));
+    document.getElementById("openStats").addEventListener("click",()=>{renderStats();openSheet(sheets.stats);});
+    document.getElementById("closePicker").addEventListener("click",()=>closeSheet(sheets.picker));
+    document.getElementById("closeRules").addEventListener("click",()=>closeSheet(sheets.rules));
+    document.getElementById("closeStats").addEventListener("click",()=>closeSheet(sheets.stats));
+    document.getElementById("closeAccuse").addEventListener("click",()=>closeSheet(sheets.accuse));
+    document.getElementById("submitAccuse").addEventListener("click",submitAccusation);
+    document.getElementById("stayBtn").addEventListener("click",()=>closeSheet(sheets.win));
+    document.getElementById("nextCaseBtn").addEventListener("click",()=>{
+      closeSheet(sheets.win);
+      if (current.generated) newGenerated();
+      else loadCase(AUTHORED[(currentIndex+1)%AUTHORED.length]);
+    });
+    document.getElementById("newGenerated").addEventListener("click",newGenerated);
+    document.querySelectorAll("#modeChips .chip").forEach((b)=>b.addEventListener("click",()=>{pickerMode=b.dataset.mode;renderPicker();}));
+    document.querySelectorAll("#typeChips .chip").forEach((b)=>b.addEventListener("click",()=>{pickerType=b.dataset.type;renderPicker();}));
+    document.querySelectorAll("#difficultyChips .chip").forEach((b)=>b.addEventListener("click",()=>{generatedDifficulty=b.dataset.diff;saveProgress({generatedDifficulty});renderPicker();}));
+    Object.values(sheets).forEach((sheet)=>sheet.addEventListener("click",(e)=>{if(e.target===sheet&&sheet!==sheets.win)closeSheet(sheet);}));
+    document.addEventListener("keydown",(e)=>{
+      if (e.key==="Escape") closeTopSheet();
+      const open=Object.values(sheets).find((s)=>!s.hidden);
+      if (e.key==="Tab"&&open) {
+        const focusable=[...open.querySelectorAll("button:not(:disabled),select,[tabindex='0']")];
+        if (!focusable.length) return;
+        const first=focusable[0],last=focusable[focusable.length-1];
+        if (e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+        else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+      }
+    });
+    document.getElementById("copyLink").addEventListener("click",async()=>{
+      try { await navigator.clipboard.writeText(location.href); setStatus("Case link copied.","good"); }
+      catch { setStatus("Copy the current address to share this case."); }
+    });
+    document.addEventListener("visibilitychange",()=>{
+      if(document.hidden)persistSnapshot();
+      else if(!won){const p=loadProgress(),snap=p.snapshot;if(snap?.key===caseKey()&&snap.runningSince){elapsedMs=Number(snap.elapsedMs)||elapsedMs;elapsedMs+=Math.max(0,Date.now()-Number(snap.runningSince));runningSince=Date.now();}startTick();}
+    });
+    window.addEventListener("hashchange",()=>{if(!syncingHash)openFromHash(false);});
+
+    const progress=loadProgress();
+    generatedDifficulty=progress.generatedDifficulty;
+    if(!openFromHash(true)){
+      const start=AUTHORED.find((c)=>c.id===progress.lastAuthored)||AUTHORED[0];
+      loadCase(start,{restore:true});
+    }
+  </script>
+</body>
+</html>

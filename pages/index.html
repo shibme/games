@@ -132,6 +132,46 @@
       background: #3a4a8c;
       box-shadow: inset -4px -2px 0 0 #c9d0ee;
     }
+    .case-mini {
+      position: relative;
+      height: 72px;
+      border-radius: 12px;
+      background: #68523b;
+      border: 1px solid #80684e;
+      overflow: hidden;
+    }
+    .case-mini span {
+      position: absolute;
+      width: 34px;
+      height: 25px;
+      padding-top: 6px;
+      border-radius: 4px;
+      background: #f1e6ca;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .case-mini span::before {
+      content: "";
+      display: block;
+      width: 5px;
+      height: 5px;
+      margin: -3px auto 0;
+      border-radius: 50%;
+      background: #a33f3f;
+    }
+    .case-mini span:nth-child(1) { left: 7px; top: 9px; transform: rotate(-5deg); }
+    .case-mini span:nth-child(2) { right: 7px; top: 13px; transform: rotate(4deg); }
+    .case-mini span:nth-child(3) { left: 27px; bottom: 7px; transform: rotate(1deg); }
+    .case-mini::before,
+    .case-mini::after {
+      content: "";
+      position: absolute;
+      z-index: 2;
+      height: 1px;
+      background: #d5ab66;
+      transform-origin: left center;
+    }
+    .case-mini::before { width: 35px; left: 30px; top: 25px; transform: rotate(18deg); }
+    .case-mini::after { width: 30px; left: 26px; top: 43px; transform: rotate(-16deg); }
 
     .copy h2 {
       margin: 0 0 4px;
@@ -181,6 +221,18 @@
             <h2>Tango</h2>
             <p>A 6×6 sun and moon logic puzzle. Fill each row and column without breaking the rules.</p>
             <span class="play">Play</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="casebook/">
+          <div class="case-mini" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="copy">
+            <h2>Casebook</h2>
+            <p>Cozy murder mysteries solved through alibis, testimony, and connected evidence.</p>
+            <span class="play">Investigate</span>
           </div>
         </a>
       </li>
