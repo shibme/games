@@ -581,7 +581,7 @@
     <div class="sheet-card win-card" role="dialog" aria-labelledby="winTitle">
       <div class="burst" id="burst" aria-hidden="true"></div>
       <h2 id="winTitle">Solved</h2>
-      <p id="winCopy" class="status good">Nice work.</p>
+      <p id="winCopy" class="status good">Solved.</p>
       <div class="sheet-actions">
         <button type="button" id="stayBtn">Stay</button>
         <button type="button" id="winNextBtn" class="primary">Next level</button>
@@ -1530,7 +1530,7 @@
       const puzzle = generatePuzzle(difficulty, avoid);
       setBusy(false);
       if (!puzzle) {
-        setStatus("Could not build a unique puzzle. Try again.", "bad");
+        setStatus("Couldn't make a puzzle. Try again.", "bad");
         updateChrome();
         return;
       }
@@ -1577,7 +1577,7 @@
         errors = new Set();
         if (!conflicts.size) recordMistake(conflicts);
         renderBoard(i);
-        setStatus("Keep going, or tap Check to highlight mistakes.");
+        setStatus("No mistakes so far.");
       }
     }
 
@@ -1907,7 +1907,7 @@
     function findHint() {
       const lv = currentLevel();
       if (!lv) {
-        return { kind: "none", reason: "No explained step yet. Keep going.", witnessCells: [], witnessEdges: [] };
+        return { kind: "none", reason: "No hint for this position.", witnessCells: [], witnessEdges: [] };
       }
       const conflicts = findConflicts();
       if (conflicts.size) {
@@ -1923,7 +1923,7 @@
       if (named) return named;
       const trial = trialForce(play, lv);
       if (trial) return trial;
-      return { kind: "none", reason: "No explained step yet. Keep going.", witnessCells: [], witnessEdges: [] };
+      return { kind: "none", reason: "No hint for this position.", witnessCells: [], witnessEdges: [] };
     }
 
     function hintFollowed(h) {
@@ -1983,11 +1983,11 @@
       renderBoard();
       const more = playMode === "generated" || levelIndex < LEVELS.length - 1;
       const timeBit = formatTime(solveMs);
-      const msg = playMode === "generated"
-        ? `Solved in ${timeBit}. Next puzzle when you are ready.`
-        : (more ? `Solved in ${timeBit}. Next level when you are ready.` : `Solved in ${timeBit}. That was the last level.`);
+      const msg = more
+        ? `Solved in ${timeBit}.`
+        : `Solved in ${timeBit}. Last level.`;
       setStatus(msg, "good");
-      winCopy.textContent = `The board is perfect. ${timeBit}.`;
+      winCopy.textContent = `Solved in ${timeBit}.`;
       winNextBtn.disabled = !more;
       spawnBurst();
       openSheet(winSheet);
