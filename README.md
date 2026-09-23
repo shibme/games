@@ -15,3 +15,9 @@ Classic levels are included. Generated mode builds new puzzles in the browser at
 A cozy detective anthology with alibi grids, contradictory testimony, and evidence-board deductions. Read each case, keep a logical notebook, then name both the culprit and the proof.
 
 Twelve authored mysteries are included. Generated mode builds replayable, uniquely solvable cases from shareable seeds.
+
+## Escape Rooms
+
+Four illustrated, hand-authored adventures set in an observatory, art-deco hotel, museum, and lighthouse. Explore each location, examine hotspots, collect and use objects, and solve a connected chain of puzzles to uncover the full story.
+
+Each compact story contains six fixed puzzles, staged hints, local progress saving, and its own resolved ending. There is no generated content.

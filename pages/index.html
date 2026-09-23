@@ -172,6 +172,51 @@
     }
     .case-mini::before { width: 35px; left: 30px; top: 25px; transform: rotate(18deg); }
     .case-mini::after { width: 30px; left: 26px; top: 43px; transform: rotate(-16deg); }
+    .escape-mini {
+      position: relative;
+      height: 72px;
+      overflow: hidden;
+      border: 1px solid #6f5d45;
+      border-radius: 12px;
+      background:
+        radial-gradient(circle at 67% 38%, rgba(247,202,112,.38), transparent 24%),
+        linear-gradient(145deg, #172234, #33251d);
+    }
+    .escape-mini::before {
+      content: "";
+      position: absolute;
+      left: 18px;
+      top: 9px;
+      width: 43px;
+      height: 62px;
+      border: 3px solid #b78a4e;
+      border-bottom: 0;
+      border-radius: 18px 18px 0 0;
+      background: #101724;
+      box-shadow: inset 0 0 0 5px #26334a;
+    }
+    .escape-mini::after {
+      content: "";
+      position: absolute;
+      left: 49px;
+      top: 39px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #f2bd58;
+      box-shadow: 17px -17px 0 11px rgba(242,189,88,.13), 0 0 13px rgba(242,189,88,.7);
+    }
+    .escape-mini span {
+      position: absolute;
+      right: 8px;
+      width: 17px;
+      height: 17px;
+      border: 1px solid #d8ad68;
+      transform: rotate(45deg);
+    }
+    .escape-mini span:nth-child(1) { top: 10px; }
+    .escape-mini span:nth-child(2) { top: 34px; border-radius: 50%; }
+    .escape-mini span:nth-child(3) { top: 55px; width: 13px; height: 13px; }
 
     .copy h2 {
       margin: 0 0 4px;
@@ -233,6 +278,18 @@
             <h2>Casebook</h2>
             <p>Cozy murder mysteries solved through alibis, testimony, and connected evidence.</p>
             <span class="play">Investigate</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="escape-room/">
+          <div class="escape-mini" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="copy">
+            <h2>Escape Rooms</h2>
+            <p>Four illustrated adventures built from connected rooms, objects, clues, and authored puzzles.</p>
+            <span class="play">Enter</span>
           </div>
         </a>
       </li>
