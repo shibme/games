@@ -21,3 +21,9 @@ Twelve authored mysteries are included. Generated mode builds replayable, unique
 Four illustrated, hand-authored adventures set in an observatory, art-deco hotel, museum, and lighthouse. Explore each location, examine hotspots, collect and use objects, and solve a connected chain of puzzles to uncover the full story.
 
 Each compact story contains six fixed puzzles, staged hints, local progress saving, and its own resolved ending. There is no generated content.
+
+## Minesweeper
+
+Clear every safe cell on a classic beginner, intermediate, or expert board. Numbers show nearby mines, the first opening is always safe, and flags mark the rest.
+
+Each board can be resumed on the same device or shared as a link that rebuilds the same minefield. Wins, losses, streaks, and best times are kept for each difficulty.

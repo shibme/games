@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0e1411">
+  <title>Minesweeper</title>
+  <style>
+    :root {
+      --bg: #0e1411;
+      --panel: #151c17;
+      --field: #121a14;
+      --chip: #0f1512;
+      --ink: #eef4ee;
+      --muted: #a9b8ad;
+      --line: #2c3b31;
+      --line-soft: #223129;
+      --accent: #f2c14d;
+      --good: #8fd6a8;
+      --bad: #ff9d92;
+      --hidden-a: #4a5f52;
+      --hidden-b: #3a4d42;
+      --hidden-line: #55705f;
+      --open: #222c26;
+      --open-line: #2d3b33;
+      --boom: #e2574a;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; max-width: 100%; overflow-x: hidden; }
+    body {
+      min-height: 100dvh;
+      padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      background:
+        radial-gradient(1000px 520px at -8% -12%, #1d4136, transparent 55%),
+        radial-gradient(760px 460px at 108% -4%, #1b2b3a, transparent 52%),
+        var(--bg);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      touch-action: manipulation;
+    }
+    button { font: inherit; }
+    button {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0 14px;
+      background: #202b23;
+      color: var(--ink);
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color .15s ease, background .15s ease, transform .12s ease;
+    }
+    button:hover { border-color: #4a6453; }
+    button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    button.primary { background: var(--accent); color: #201809; border-color: #e2b444; }
+    button.ghost { background: transparent; border-color: transparent; color: var(--muted); }
+    button.ghost:hover { color: var(--ink); border-color: var(--line); }
+    .wrap { width: min(1040px, 100%); margin: 0 auto; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .back {
+      display: grid; place-items: center; width: 44px; height: 44px; flex: none;
+      border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.05);
+      color: var(--ink); text-decoration: none; font-size: 1.15rem;
+    }
+    h1 { margin: 0; font-size: clamp(1.4rem, 3vw, 1.8rem); letter-spacing: -.04em; }
+    .pill-btn {
+      display: flex; align-items: center; gap: 8px;
+      min-height: 44px; padding: 0 14px 0 16px;
+      border-radius: 999px; background: var(--panel);
+    }
+    .pill-btn .chev { color: var(--muted); font-size: .8rem; }
+    .panel {
+      border: 1px solid var(--line); border-radius: 24px;
+      background: linear-gradient(180deg, #18211a, var(--panel));
+      box-shadow: 0 18px 50px rgba(0,0,0,.3); padding: 14px;
+    }
+    .info-row { display: flex; align-items: stretch; gap: 8px; margin-bottom: 12px; }
+    .chip {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 48px; padding: 0 12px; border: 1px solid var(--line-soft);
+      border-radius: 14px; background: var(--chip);
+    }
+    .chip svg { width: 16px; height: 16px; color: var(--muted); flex: none; }
+    .chip b { font-size: 1.08rem; font-variant-numeric: tabular-nums; }
+    .chip small { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .09em; }
+    #newBoardBtn { white-space: nowrap; }
+    .board-scroll {
+      overflow: auto; max-width: 100%; border-radius: 16px;
+      background: var(--field); border: 1px solid var(--line-soft);
+      padding: 10px; overscroll-behavior: contain;
+    }
+    .board {
+      display: flex; flex-direction: column; gap: 4px; width: max-content; margin: 0 auto;
+      touch-action: manipulation; user-select: none;
+    }
+    .board.beginner { --cell: clamp(44px, 8vw, 56px); }
+    .board.intermediate, .board.expert { --cell: 44px; }
+    .row { display: grid; grid-template-columns: repeat(var(--cols), var(--cell)); gap: 4px; }
+    .cell {
+      width: var(--cell); height: var(--cell); min-height: 0; padding: 0; border-radius: 9px;
+      border: 1px solid var(--hidden-line);
+      background: linear-gradient(180deg, var(--hidden-a), var(--hidden-b));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 1px 2px rgba(0,0,0,.25);
+      color: #dfe9e0; font-weight: 900; font-size: calc(var(--cell) * .46);
+      display: grid; place-items: center; -webkit-touch-callout: none;
+    }
+    .cell:not(.open):hover { border-color: #7d9a89; filter: brightness(1.07); }
+    .cell:not(.open):active { transform: scale(.92); }
+    .cell.open { background: var(--open); border-color: var(--open-line); box-shadow: none; }
+    .cell.boom { background: var(--boom); border-color: #b23c31; animation: shake .45s ease; }
+    .cell.wrong { background: #55322c; border-color: #7c423a; }
+    .cell svg { width: 60%; height: 60%; }
+    .cell.pop { animation: pop .3s ease both; animation-delay: var(--d, 0ms); }
+    .board.won .cell { animation: winGlow .9s ease both; animation-delay: calc(var(--w) * 22ms); }
+    @keyframes pop { from { transform: scale(.7); opacity: .35; } }
+    @keyframes shake {
+      20% { transform: translate(-2px, 1px); }
+      40% { transform: translate(3px, -1px); }
+      60% { transform: translate(-3px, 1px); }
+      80% { transform: translate(2px, -1px); }
+    }
+    @keyframes winGlow { 45% { box-shadow: 0 0 0 2px rgba(242, 193, 77, .5); } }
+    .n1 { color: #7cb8ff; } .n2 { color: #82d99a; } .n3 { color: #ff8677; } .n4 { color: #b79bff; }
+    .n5 { color: #e0a35c; } .n6 { color: #5fd4cd; } .n7 { color: #f0f0f0; } .n8 { color: #9aa8a0; }
+    .progress { margin-top: 12px; }
+    .progress-label { margin: 0 0 6px; color: var(--muted); font-size: .8rem; font-weight: 650; }
+    .progress-track {
+      height: 8px; border-radius: 999px; overflow: hidden;
+      background: var(--chip); border: 1px solid var(--line-soft);
+    }
+    .progress-fill {
+      height: 100%; width: 0; border-radius: 999px;
+      background: linear-gradient(90deg, #3f7d5c, var(--good));
+      transition: width .3s ease;
+    }
+    .mode-seg {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px;
+      padding: 6px; border: 1px solid var(--line-soft); border-radius: 16px; background: var(--chip);
+    }
+    .mode-seg button {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 44px; border: 1px solid transparent; border-radius: 11px;
+      background: transparent; color: var(--muted);
+    }
+    .mode-seg button svg { width: 16px; height: 16px; }
+    .mode-seg button[aria-pressed="true"] { background: var(--ink); color: #131a14; font-weight: 800; }
+    .footer-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+    .footer-row button { flex: 1; white-space: nowrap; }
+    .status { min-height: 2.6em; margin: 12px 0 0; color: var(--muted); font-weight: 650; }
+    .status.bad { color: var(--bad); } .status.good { color: var(--good); }
+    dialog {
+      width: min(560px, calc(100% - 24px)); max-height: min(86dvh, 760px); overflow: auto;
+      border: 1px solid var(--line); border-radius: 22px; padding: 0;
+      background: #141b16; color: var(--ink); box-shadow: 0 28px 90px rgba(0,0,0,.55);
+    }
+    dialog::backdrop { background: rgba(4, 8, 6, .66); backdrop-filter: blur(4px); }
+    .dialog-head {
+      position: sticky; top: 0; z-index: 2; display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; padding: 14px 16px; background: #1a231c; border-bottom: 1px solid var(--line);
+    }
+    .dialog-head h2 { margin: 0; font-size: 1.3rem; }
+    .dialog-body { padding: 18px 16px; }
+    .icon { width: 44px; padding: 0; }
+    .rules { margin: 0; padding-left: 1.1rem; color: var(--muted); line-height: 1.5; }
+    .rules li { margin: 8px 0; }
+    .stats, .diff-list, .end-stats { display: grid; gap: 10px; }
+    .stat-card { border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: rgba(255,255,255,.03); }
+    .stat-card h3 { margin: 0 0 8px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .stat-grid div, .end-stats div { color: var(--muted); font-size: .82rem; }
+    .stat-grid strong, .end-stats strong { display: block; color: var(--ink); font-size: 1.2rem; }
+    .end-stats { grid-template-columns: repeat(3, 1fr); margin: 14px 0 4px; }
+    .end-note { margin: 8px 0 0; color: var(--muted); line-height: 1.45; }
+    .end-note.bad { color: var(--bad); }
+    .dialog-actions { display: flex; gap: 8px; margin-top: 16px; }
+    .dialog-actions button { flex: 1; }
+    .diff-option {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      width: 100%; min-height: 56px; text-align: left; padding: 10px 14px;
+    }
+    .diff-option strong { display: block; }
+    .diff-option small { color: var(--muted); }
+    .diff-option.current { border-color: var(--accent); }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+    @media (max-width: 640px) {
+      header { align-items: flex-start; }
+      .info-row { flex-wrap: wrap; }
+      .chip { min-width: 128px; }
+      #newBoardBtn { flex: 1 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <div class="brand">
+        <a class="back" href="../" aria-label="All games">←</a>
+        <h1>Minesweeper</h1>
+      </div>
+      <button type="button" class="pill-btn" id="diffPill" aria-haspopup="dialog">
+        <span id="diffLabel">Beginner</span>
+        <span class="chev" aria-hidden="true">▾</span>
+      </button>
+    </header>
+    <section class="panel">
+      <div class="info-row">
+        <div class="chip" id="mineChip">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 3v26" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M10 5h14l-4.5 6 4.5 6H10z" fill="currentColor"/></svg>
+          <b id="mineCount">10</b><small>mines</small>
+        </div>
+        <div class="chip">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M16 9.5V16l4.5 3" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+          <b id="timer">0:00</b><small>time</small>
+        </div>
+        <button type="button" id="newBoardBtn">New board</button>
+      </div>
+      <div class="board-scroll" id="boardScroll">
+        <div class="board beginner" id="board" role="grid" aria-label="Minesweeper board"></div>
+      </div>
+      <div class="progress" id="progressBar" role="progressbar" aria-label="Safe cells cleared" aria-valuemin="0" aria-valuemax="71" aria-valuenow="0">
+        <p class="progress-label" id="progressLabel">0 of 71 safe cells cleared</p>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+      <div class="mode-seg" role="group" aria-label="Tap action">
+        <button type="button" data-mode="reveal" aria-pressed="true">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="16" cy="16" r="2.6" fill="currentColor"/></svg>
+          Reveal
+        </button>
+        <button type="button" data-mode="flag" aria-pressed="false">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 3v26" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M10 5h14l-4.5 6 4.5 6H10z" fill="currentColor"/></svg>
+          Flag
+        </button>
+      </div>
+      <div class="footer-row">
+        <button type="button" class="ghost" id="rulesBtn">How to play</button>
+        <button type="button" class="ghost" id="statsBtn">Stats</button>
+        <button type="button" class="ghost" id="copyBtn">Copy board link</button>
+      </div>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <dialog id="rulesDialog" aria-labelledby="rulesTitle">
+    <div class="dialog-head">
+      <h2 id="rulesTitle">How to play</h2>
+      <button type="button" class="icon dialog-close" aria-label="Close dialog">×</button>
+    </div>
+    <div class="dialog-body">
+      <ul class="rules">
+        <li>Reveal cells and use the numbers to find every mine. A number says how many mines touch that cell.</li>
+        <li>The first cell you reveal, and every cell touching it, is always safe.</li>
+        <li>Long-press, right-click, or press F to flag a mine, or switch the Reveal / Flag control under the board. Arrow keys move between cells, and Enter acts on the selected cell.</li>
+        <li>Reveal a completed number to open the remaining cells around it.</li>
+        <li>The timer starts on the first reveal, pauses while this tab is hidden, and stops when the board ends.</li>
+        <li>A copied link rebuilds the same minefield. It does not include your flags, time, or progress.</li>
+      </ul>
+    </div>
+  </dialog>
+
+  <dialog id="statsDialog" aria-labelledby="statsTitle">
+    <div class="dialog-head">
+      <h2 id="statsTitle">Field record</h2>
+      <button type="button" class="icon dialog-close" aria-label="Close dialog">×</button>
+    </div>
+    <div class="dialog-body"><div class="stats" id="statsBody"></div></div>
+  </dialog>
+
+  <dialog id="diffDialog" aria-labelledby="diffTitle">
+    <div class="dialog-head">
+      <h2 id="diffTitle">Choose a field</h2>
+      <button type="button" class="icon dialog-close" aria-label="Close dialog">×</button>
+    </div>
+    <div class="dialog-body"><div class="diff-list" id="diffList"></div></div>
+  </dialog>
+
+  <dialog id="endDialog" aria-labelledby="endTitle">
+    <div class="dialog-head">
+      <h2 id="endTitle">Round over</h2>
+      <button type="button" class="icon dialog-close" aria-label="Close dialog">×</button>
+    </div>
+    <div class="dialog-body" id="endBody"></div>
+  </dialog>
+
+  <script>
+    'use strict';
+    const STORAGE_KEY = 'minesweeper-progress';
+    const STORAGE_VERSION = 1;
+    const DIFFICULTIES = {
+      beginner: { rows: 9, cols: 9, mines: 10, label: 'Beginner' },
+      intermediate: { rows: 16, cols: 16, mines: 40, label: 'Intermediate' },
+      expert: { rows: 16, cols: 30, mines: 99, label: 'Expert' }
+    };
+    const MINE_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="6.5" fill="#1b1916"/><path d="M16 3v6M16 23v6M3 16h6M23 16h6M7 7l4.2 4.2M20.8 20.8 25 25M25 7l-4.2 4.2M11.2 20.8 7 25" stroke="#1b1916" stroke-width="2" stroke-linecap="round"/></svg>';
+    const FLAG_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 3v26" stroke="#3a3228" stroke-width="2.4" stroke-linecap="round"/><path d="M10 5h14l-4.5 6 4.5 6H10z" fill="#d4534a"/></svg>';
+
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const mineChip = document.getElementById('mineChip');
+    const mineEl = document.getElementById('mineCount');
+    const timerEl = document.getElementById('timer');
+    const diffPill = document.getElementById('diffPill');
+    const diffLabel = document.getElementById('diffLabel');
+    const newBoardBtn = document.getElementById('newBoardBtn');
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    const progressLabel = document.getElementById('progressLabel');
+    const rulesDialog = document.getElementById('rulesDialog');
+    const statsDialog = document.getElementById('statsDialog');
+    const diffDialog = document.getElementById('diffDialog');
+    const endDialog = document.getElementById('endDialog');
+    let progress = loadProgress();
+    let game = null;
+    let focus = { r: 0, c: 0 };
+    let suppressClick = false;
+    let pressTimer = 0;
+    let lastLongPress = 0;
+    let syncingHash = false;
+    let lastFocus = null;
+
+    function neighbors(spec, row, col) {
+      const cells = [];
+      for (let r = row - 1; r <= row + 1; r++) {
+        for (let c = col - 1; c <= col + 1; c++) {
+          if ((r !== row || c !== col) && r >= 0 && c >= 0 && r < spec.rows && c < spec.cols) cells.push([r, c]);
+        }
+      }
+      return cells;
+    }
+
+    function rngFor(seed) {
+      let h = 2166136261;
+      for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+      return function () {
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        h ^= h >>> 16;
+        return (h >>> 0) / 4294967296;
+      };
+    }
+
+    function blankBoard(difficulty) {
+      const spec = DIFFICULTIES[difficulty];
+      return Array.from({ length: spec.rows }, () => Array.from({ length: spec.cols }, () => ({ mine: false, open: false, flag: false, count: 0 })));
+    }
+
+    function placeMines(difficulty, seed, row, col) {
+      const spec = DIFFICULTIES[difficulty];
+      const rng = rngFor(`${seed}:${row}:${col}`);
+      const forbidden = new Set(neighbors(spec, row, col).concat([[row, col]]).map(([r, c]) => r * spec.cols + c));
+      const pool = [];
+      for (let i = 0; i < spec.rows * spec.cols; i++) if (!forbidden.has(i)) pool.push(i);
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const mines = new Set(pool.slice(0, spec.mines));
+      const board = blankBoard(difficulty);
+      for (let r = 0; r < spec.rows; r++) {
+        for (let c = 0; c < spec.cols; c++) {
+          const cell = board[r][c];
+          cell.mine = mines.has(r * spec.cols + c);
+        }
+      }
+      for (let r = 0; r < spec.rows; r++) {
+        for (let c = 0; c < spec.cols; c++) {
+          if (board[r][c].mine) continue;
+          board[r][c].count = neighbors(spec, r, c).filter(([rr, cc]) => board[rr][cc].mine).length;
+        }
+      }
+      return board;
+    }
+
+    function floodBoard(board, spec, row, col) {
+      const stack = [[row, col]];
+      let opened = 0;
+      while (stack.length) {
+        const [r, c] = stack.pop();
+        const cell = board[r] && board[r][c];
+        if (!cell || cell.open || cell.flag || cell.mine) continue;
+        cell.open = true;
+        opened++;
+        if (cell.count === 0) neighbors(spec, r, c).forEach((next) => stack.push(next));
+      }
+      return opened;
+    }
+
+    function boardCleared(board) {
+      return board.every((row) => row.every((cell) => cell.mine || cell.open));
+    }
+
+    function chordAt(board, spec, row, col) {
+      const cell = board[row][col];
+      if (!cell || !cell.open || !cell.count) return { type: 'noop' };
+      const around = neighbors(spec, row, col);
+      if (around.filter(([r, c]) => board[r][c].flag).length !== cell.count) return { type: 'noop' };
+      let hit = null;
+      around.forEach(([r, c]) => {
+        const neighbor = board[r][c];
+        if (neighbor.open || neighbor.flag) return;
+        if (neighbor.mine) { if (!hit) hit = { r, c }; return; }
+        floodBoard(board, spec, r, c);
+      });
+      return hit ? { type: 'mine', hit } : { type: 'ok' };
+    }
+
+    function openKeySet() {
+      const keys = new Set();
+      game.board.forEach((row, r) => row.forEach((cell, c) => { if (cell.open) keys.add(`${r},${c}`); }));
+      return keys;
+    }
+
+    function markLastOpened(before, origin) {
+      game.lastOrigin = origin;
+      game.lastOpened = new Set();
+      game.board.forEach((row, r) => row.forEach((cell, c) => {
+        const key = `${r},${c}`;
+        if (cell.open && !before.has(key)) game.lastOpened.add(key);
+      }));
+    }
+
+    function number(value) { return Number.isFinite(Number(value)) ? Math.max(0, Math.floor(Number(value))) : 0; }
+    function emptyStats() { return { wins: 0, losses: 0, streak: 0, bestStreak: 0, bestMs: 0 }; }
+    function randomSeed() {
+      const values = new Uint32Array(2);
+      crypto.getRandomValues(values);
+      return Array.from(values, (value) => value.toString(36)).join('');
+    }
+
+    function validSnapshot(snapshot) {
+      if (!snapshot || !DIFFICULTIES[snapshot.difficulty] || !/^[a-z0-9]+$/.test(snapshot.seed || '')) return null;
+      const spec = DIFFICULTIES[snapshot.difficulty];
+      const first = snapshot.first;
+      if (first && (!Number.isInteger(first.r) || !Number.isInteger(first.c) || first.r < 0 || first.c < 0 || first.r >= spec.rows || first.c >= spec.cols)) return null;
+      if (!['ready', 'playing', 'won', 'lost'].includes(snapshot.status)) return null;
+      return snapshot;
+    }
+
+    function loadProgress() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        const source = raw && typeof raw === 'object' ? raw : {};
+        const stats = {};
+        Object.keys(DIFFICULTIES).forEach((key) => {
+          const item = source.stats && source.stats[key] || {};
+          stats[key] = { wins: number(item.wins), losses: number(item.losses), streak: number(item.streak), bestStreak: number(item.bestStreak), bestMs: number(item.bestMs) };
+        });
+        return {
+          version: STORAGE_VERSION,
+          lastDifficulty: DIFFICULTIES[source.lastDifficulty] ? source.lastDifficulty : 'beginner',
+          flagMode: !!source.flagMode,
+          stats,
+          snapshot: validSnapshot(source.snapshot)
+        };
+      } catch { return { version: STORAGE_VERSION, lastDifficulty: 'beginner', flagMode: false, stats: Object.fromEntries(Object.keys(DIFFICULTIES).map((key) => [key, emptyStats()])), snapshot: null }; }
+    }
+
+    function saveProgress() {
+      progress.snapshot = snapshot();
+      progress.lastDifficulty = game.difficulty;
+      progress.flagMode = game.flagMode;
+      progress.version = STORAGE_VERSION;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    }
+
+    function snapshot() {
+      const opened = [], flags = [];
+      game.board.forEach((row, r) => row.forEach((cell, c) => {
+        if (cell.open) opened.push([r, c]);
+        if (cell.flag) flags.push([r, c]);
+      }));
+      return {
+        difficulty: game.difficulty, seed: game.seed, first: game.first, opened, flags,
+        status: game.status, hit: game.hit, recorded: game.recorded,
+        elapsedMs: currentElapsed(), running: !!game.runningSince
+      };
+    }
+
+    function parseHash(hash) {
+      const match = /^#m\.(beginner|intermediate|expert)\.([a-z0-9]+)(?:\.(\d+)\.(\d+))?$/.exec(hash || '');
+      if (!match) return null;
+      const difficulty = match[1];
+      const spec = DIFFICULTIES[difficulty];
+      let first = null;
+      if (match[3] != null) {
+        const r = Number(match[3]), c = Number(match[4]);
+        if (!Number.isInteger(r) || !Number.isInteger(c) || r < 0 || c < 0 || r >= spec.rows || c >= spec.cols) return null;
+        first = { r, c };
+      }
+      return { difficulty, seed: match[2], first };
+    }
+
+    function puzzleKey(value) {
+      if (!value.first) return `m.${value.difficulty}.${value.seed}`;
+      return `m.${value.difficulty}.${value.seed}.${value.first.r}.${value.first.c}`;
+    }
+
+    function samePuzzle(a, b) {
+      return !!a && !!b && puzzleKey(a) === puzzleKey(b);
+    }
+
+    function syncFragment() {
+      const value = `#${puzzleKey(game)}`;
+      if (location.hash === value) return;
+      syncingHash = true;
+      history.replaceState(null, '', value);
+      syncingHash = false;
+    }
+
+    function createGame(difficulty, seed, flagMode) {
+      return {
+        difficulty, seed, flagMode: !!flagMode, first: null, placed: false,
+        board: blankBoard(difficulty), status: 'ready', hit: null, recorded: false,
+        elapsedMs: 0, runningSince: null, tick: null, lastOpened: null, lastOrigin: null
+      };
+    }
+
+    function applyMarks(opened, flags) {
+      (opened || []).forEach(([r, c]) => { if (game.board[r] && game.board[r][c] && !game.board[r][c].mine) game.board[r][c].open = true; });
+      (flags || []).forEach(([r, c]) => { if (game.board[r] && game.board[r][c]) game.board[r][c].flag = true; });
+    }
+
+    function resume(snapshotValue) {
+      stopTick();
+      game = createGame(snapshotValue.difficulty, snapshotValue.seed, progress.flagMode);
+      game.status = snapshotValue.status;
+      game.hit = snapshotValue.hit || null;
+      game.recorded = !!snapshotValue.recorded;
+      game.elapsedMs = number(snapshotValue.elapsedMs);
+      game.first = snapshotValue.first ? { r: snapshotValue.first.r, c: snapshotValue.first.c } : null;
+      game.placed = !!game.first;
+      game.board = game.placed ? placeMines(game.difficulty, game.seed, game.first.r, game.first.c) : blankBoard(game.difficulty);
+      applyMarks(game.placed ? snapshotValue.opened : [], snapshotValue.flags);
+      if (game.status === 'playing' && !document.hidden) startTimer();
+      focus = { r: 0, c: 0 };
+      syncFragment();
+      render();
+      setStatus(game.status === 'won' ? `Cleared the field in ${formatTime(game.elapsedMs)}.` : game.status === 'lost' ? 'You hit a mine.' : 'Board restored.');
+    }
+
+    function startClean(fragment) {
+      stopTick();
+      game = createGame(fragment.difficulty, fragment.seed, progress.flagMode);
+      if (fragment.first) {
+        game.first = fragment.first;
+        game.placed = true;
+        game.board = placeMines(fragment.difficulty, fragment.seed, fragment.first.r, fragment.first.c);
+      }
+      focus = { r: 0, c: 0 };
+      saveProgress();
+      syncFragment();
+      render();
+      setStatus(fragment.first ? 'Shared board ready. Clear every safe cell.' : 'New board ready. The first opening is safe.');
+    }
+
+    function newGame(difficulty) {
+      stopTick();
+      game = createGame(difficulty || game.difficulty, randomSeed(), game ? game.flagMode : progress.flagMode);
+      focus = { r: 0, c: 0 };
+      saveProgress();
+      syncFragment();
+      render();
+      setStatus(`New ${DIFFICULTIES[game.difficulty].label.toLowerCase()} board. The first opening is safe.`);
+    }
+
+    function ensurePlaced(row, col) {
+      if (game.placed) return;
+      const flags = [];
+      game.board.forEach((line, r) => line.forEach((cell, c) => { if (cell.flag) flags.push([r, c]); }));
+      game.board = placeMines(game.difficulty, game.seed, row, col);
+      game.first = { r: row, c: col };
+      game.placed = true;
+      applyMarks([], flags);
+      syncFragment();
+    }
+
+    function currentElapsed() { return game.elapsedMs + (game.runningSince ? Math.max(0, Date.now() - game.runningSince) : 0); }
+    function formatTime(ms) {
+      const total = Math.max(0, Math.floor(ms / 1000));
+      const hours = Math.floor(total / 3600);
+      const minutes = Math.floor((total % 3600) / 60);
+      const seconds = total % 60;
+      return hours ? `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}` : `${minutes}:${String(seconds).padStart(2, '0')}`;
+    }
+    function renderTimer() { timerEl.textContent = formatTime(currentElapsed()); }
+    function stopTick() { if (game && game.tick) clearInterval(game.tick); if (game) game.tick = null; }
+    function startTimer() {
+      if (!game || game.status === 'won' || game.status === 'lost') return;
+      game.status = 'playing';
+      if (!game.runningSince && !document.hidden) game.runningSince = Date.now();
+      if (!game.tick) game.tick = setInterval(() => { renderTimer(); if (game.runningSince) saveProgress(); }, 1000);
+      renderTimer();
+    }
+    function freezeTimer() {
+      game.elapsedMs = currentElapsed();
+      game.runningSince = null;
+      stopTick();
+      renderTimer();
+    }
+
+    function setStatus(text, kind) {
+      statusEl.textContent = text;
+      statusEl.className = 'status' + (kind ? ` ${kind}` : '');
+    }
+
+    function recordEnd(kind) {
+      if (game.recorded) return;
+      const stats = progress.stats[game.difficulty];
+      if (kind === 'win') {
+        stats.wins++;
+        stats.streak++;
+        stats.bestStreak = Math.max(stats.bestStreak, stats.streak);
+        const elapsed = currentElapsed();
+        if (!stats.bestMs || elapsed < stats.bestMs) stats.bestMs = elapsed;
+      } else {
+        stats.losses++;
+        stats.streak = 0;
+      }
+      game.recorded = true;
+    }
+
+    function win() {
+      if (game.status === 'won' || game.status === 'lost') return;
+      game.board.forEach((row) => row.forEach((cell) => { if (cell.mine) cell.flag = true; }));
+      freezeTimer();
+      game.status = 'won';
+      recordEnd('win');
+      saveProgress();
+      render();
+      setStatus(`Cleared the field in ${formatTime(game.elapsedMs)}.`, 'good');
+      queueEnd('won');
+    }
+
+    function lose(row, col) {
+      if (game.status === 'won' || game.status === 'lost') return;
+      game.hit = { r: row, c: col };
+      freezeTimer();
+      game.status = 'lost';
+      recordEnd('loss');
+      saveProgress();
+      render();
+      setStatus('You hit a mine.', 'bad');
+      queueEnd('lost');
+    }
+
+    function reveal(row, col) {
+      if (!game || game.status === 'won' || game.status === 'lost') return;
+      const existing = game.board[row][col];
+      if (existing.open || existing.flag) return;
+      if (!game.placed) ensurePlaced(row, col);
+      if (game.status === 'ready') game.status = 'playing';
+      startTimer();
+      const cell = game.board[row][col];
+      if (cell.mine) { lose(row, col); return; }
+      const before = openKeySet();
+      const opened = floodBoard(game.board, DIFFICULTIES[game.difficulty], row, col);
+      markLastOpened(before, { r: row, c: col });
+      if (boardCleared(game.board)) { win(); return; }
+      saveProgress();
+      render();
+      setStatus(opened > 1 ? `Cleared ${opened} safe cells.` : `Opened row ${row + 1}, column ${col + 1}, ${cell.count} nearby.`);
+    }
+
+    function toggleFlag(row, col) {
+      if (!game || game.status === 'won' || game.status === 'lost') return;
+      const cell = game.board[row][col];
+      if (cell.open) return;
+      cell.flag = !cell.flag;
+      saveProgress();
+      render();
+      setStatus(cell.flag ? `Flagged row ${row + 1}, column ${col + 1}.` : `Removed the flag at row ${row + 1}, column ${col + 1}.`);
+    }
+
+    function chord(row, col) {
+      if (!game.placed || game.status === 'won' || game.status === 'lost') return;
+      const before = openKeySet();
+      const result = chordAt(game.board, DIFFICULTIES[game.difficulty], row, col);
+      if (result.type === 'noop') { setStatus('That number needs a matching number of flags.'); return; }
+      if (result.type === 'mine') { lose(result.hit.r, result.hit.c); return; }
+      markLastOpened(before, { r: row, c: col });
+      if (boardCleared(game.board)) { win(); return; }
+      saveProgress();
+      render();
+      setStatus('Opened the cells around that number.');
+    }
+
+    function activate(row, col) {
+      const cell = game.board[row][col];
+      if (cell.open) { chord(row, col); return; }
+      if (game.flagMode) { toggleFlag(row, col); return; }
+      reveal(row, col);
+    }
+
+    function cellLabel(row, col, cell) {
+      const where = `Row ${row + 1}, column ${col + 1}`;
+      const ended = game.status === 'won' || game.status === 'lost';
+      if (game.status === 'lost' && game.hit && game.hit.r === row && game.hit.c === col) return `${where}, exploded mine`;
+      if (ended && cell.mine && !cell.flag) return `${where}, mine`;
+      if (game.status === 'lost' && cell.flag && !cell.mine) return `${where}, incorrect flag`;
+      if (cell.flag) return `${where}, flagged`;
+      if (!cell.open) return `${where}, hidden`;
+      if (!cell.count) return `${where}, empty`;
+      return `${where}, ${cell.count} nearby`;
+    }
+
+    function cellMarkup(row, col) {
+      const cell = game.board[row][col];
+      const ended = game.status === 'won' || game.status === 'lost';
+      const boom = game.status === 'lost' && game.hit && game.hit.r === row && game.hit.c === col;
+      const showMine = ended && cell.mine && !cell.flag;
+      const wrong = game.status === 'lost' && cell.flag && !cell.mine;
+      const fresh = game.lastOpened && game.lastOpened.has(`${row},${col}`);
+      const delay = fresh && game.lastOrigin
+        ? Math.min(420, Math.max(Math.abs(row - game.lastOrigin.r), Math.abs(col - game.lastOrigin.c)) * 32)
+        : 0;
+      const classes = ['cell'];
+      if (cell.open) classes.push('open');
+      if (boom) classes.push('boom');
+      if (wrong) classes.push('wrong');
+      if (cell.open && cell.count) classes.push(`n${cell.count}`);
+      if (fresh) classes.push('pop');
+      let content = '';
+      if (cell.flag) content = FLAG_SVG;
+      else if (showMine || boom) content = MINE_SVG;
+      else if (cell.open && cell.count) content = String(cell.count);
+      const tab = row === focus.r && col === focus.c ? '0' : '-1';
+      const style = `--w:${row + col}${fresh ? `;--d:${delay}ms` : ''}`;
+      return `<button type="button" class="${classes.join(' ')}" role="gridcell" data-r="${row}" data-c="${col}" tabindex="${tab}" aria-label="${cellLabel(row, col, cell)}" style="${style}">${content}</button>`;
+    }
+
+    function render() {
+      const spec = DIFFICULTIES[game.difficulty];
+      const flags = game.board.flat().filter((cell) => cell.flag).length;
+      const remaining = spec.mines - flags;
+      mineEl.textContent = String(remaining);
+      mineChip.setAttribute('aria-label', `${remaining} mines remaining`);
+      renderTimer();
+      diffLabel.textContent = spec.label;
+      document.querySelectorAll('.mode-seg button').forEach((button) => {
+        button.setAttribute('aria-pressed', String((button.dataset.mode === 'flag') === game.flagMode));
+      });
+      const totalSafe = spec.rows * spec.cols - spec.mines;
+      const cleared = game.board.flat().filter((cell) => cell.open && !cell.mine).length;
+      progressFill.style.width = `${totalSafe ? Math.round((cleared / totalSafe) * 100) : 0}%`;
+      progressLabel.textContent = `${cleared} of ${totalSafe} safe cells cleared`;
+      progressBar.setAttribute('aria-valuemax', String(totalSafe));
+      progressBar.setAttribute('aria-valuenow', String(cleared));
+      const hadFocus = boardEl.contains(document.activeElement);
+      boardEl.className = `board ${game.difficulty}${game.status === 'won' ? ' won' : ''}`;
+      boardEl.style.setProperty('--cols', spec.cols);
+      boardEl.setAttribute('aria-rowcount', String(spec.rows));
+      boardEl.setAttribute('aria-colcount', String(spec.cols));
+      boardEl.innerHTML = game.board.map((row, r) => `<div class="row" role="row">${row.map((_, c) => cellMarkup(r, c)).join('')}</div>`).join('');
+      game.lastOpened = null;
+      game.lastOrigin = null;
+      if (hadFocus) boardEl.querySelector(`[data-r="${focus.r}"][data-c="${focus.c}"]`)?.focus();
+    }
+
+    function renderStats() {
+      document.getElementById('statsBody').innerHTML = Object.entries(DIFFICULTIES).map(([key, spec]) => {
+        const stats = progress.stats[key];
+        return `<section class="stat-card"><h3>${spec.label}</h3><div class="stat-grid"><div><strong>${stats.wins}</strong>Wins</div><div><strong>${stats.losses}</strong>Losses</div><div><strong>${stats.streak}</strong>Current streak</div><div><strong>${stats.bestStreak}</strong>Best streak</div><div><strong>${stats.wins ? formatTime(stats.bestMs) : '—'}</strong>Best time</div></div></section>`;
+      }).join('');
+    }
+
+    function showEnd(kind) {
+      const stats = progress.stats[game.difficulty];
+      const spec = DIFFICULTIES[game.difficulty];
+      document.getElementById('endTitle').textContent = kind === 'won' ? 'Field cleared' : 'Mine hit';
+      const actions = `<div class="dialog-actions"><button type="button" class="ghost" id="endReview">Review board</button><button type="button" id="endDiff">Change difficulty</button><button type="button" class="primary" id="endAgain">${kind === 'won' ? 'Replay' : 'Retry'}</button></div>`;
+      if (kind === 'won') {
+        document.getElementById('endBody').innerHTML = `
+      <p class="end-note">Every safe cell on the ${spec.label.toLowerCase()} field is open.</p>
+      <div class="end-stats">
+        <div><strong>${formatTime(game.elapsedMs)}</strong><span>Time</span></div>
+        <div><strong>${stats.wins ? formatTime(stats.bestMs) : '—'}</strong><span>Best</span></div>
+        <div><strong>${stats.streak}</strong><span>Streak</span></div>
+      </div>
+      ${actions}`;
+      } else {
+        const wrong = game.board.flat().filter((cell) => cell.flag && !cell.mine).length;
+        document.getElementById('endBody').innerHTML = `
+      <p class="end-note">The full minefield is open for review.</p>
+      ${wrong ? `<p class="end-note bad">${wrong} flag${wrong === 1 ? ' was' : 's were'} on safe cells.</p>` : ''}
+      ${actions}`;
+      }
+      openDialog(endDialog);
+      document.getElementById('endAgain')?.focus();
+    }
+
+    function queueEnd(kind) {
+      const ended = game;
+      setTimeout(() => { if (game === ended && game.status === kind) showEnd(kind); }, kind === 'won' ? 750 : 450);
+    }
+
+    function renderDiffOptions() {
+      document.getElementById('diffList').innerHTML = Object.entries(DIFFICULTIES).map(([key, spec]) => {
+        const stats = progress.stats[key];
+        return `<button type="button" class="diff-option${key === game.difficulty ? ' current' : ''}" data-diff="${key}"><span><strong>${spec.label}</strong><small>${spec.rows}×${spec.cols} · ${spec.mines} mines</small></span><small>${stats.wins ? `Best ${formatTime(stats.bestMs)}` : 'No wins yet'}</small></button>`;
+      }).join('');
+    }
+
+    function openDiffDialog() {
+      renderDiffOptions();
+      openDialog(diffDialog);
+    }
+
+    function openDialog(dialog) {
+      lastFocus = document.activeElement;
+      dialog.showModal();
+    }
+
+    function selfCheck() {
+      const errors = [];
+      const first = placeMines('beginner', 'testseed', 4, 4);
+      const second = placeMines('beginner', 'testseed', 4, 4);
+      if (JSON.stringify(first) !== JSON.stringify(second)) errors.push('placement changed');
+      neighbors(DIFFICULTIES.beginner, 4, 4).concat([[4, 4]]).forEach(([r, c]) => { if (first[r][c].mine) errors.push('safe zone mined'); });
+      if (first[4][4].count !== 0) errors.push('opening not clear');
+      const mineCount = first.flat().filter((cell) => cell.mine).length;
+      if (mineCount !== 10) errors.push('beginner mine count');
+      first.forEach((row, r) => row.forEach((cell, c) => {
+        if (cell.mine) return;
+        const count = neighbors(DIFFICULTIES.beginner, r, c).filter(([rr, cc]) => first[rr][cc].mine).length;
+        if (count !== cell.count) errors.push('bad adjacency');
+      }));
+      if (placeMines('intermediate', 'seed', 1, 1).flat().filter((cell) => cell.mine).length !== 40) errors.push('intermediate mine count');
+      if (placeMines('expert', 'seed', 8, 15).flat().filter((cell) => cell.mine).length !== 99) errors.push('expert mine count');
+      floodBoard(first, DIFFICULTIES.beginner, 4, 4);
+      if (!first[4][4].open || first.flat().some((cell) => cell.mine && cell.open)) errors.push('flood failed');
+      const winBoard = placeMines('beginner', 'winner', 2, 2);
+      winBoard.forEach((row) => row.forEach((cell) => { if (!cell.mine) cell.open = true; }));
+      if (!boardCleared(winBoard)) errors.push('win detection failed');
+      const tiny = { rows: 2, cols: 2 };
+      const chordBoard = [
+        [{ mine: false, open: true, flag: false, count: 1 }, { mine: false, open: false, flag: false, count: 1 }],
+        [{ mine: false, open: false, flag: false, count: 1 }, { mine: true, open: false, flag: true, count: 1 }]
+      ];
+      if (chordAt(chordBoard, tiny, 0, 0).type !== 'ok' || !chordBoard[0][1].open || chordBoard[1][1].open) errors.push('correct chord failed');
+      const badBoard = [
+        [{ mine: false, open: true, flag: false, count: 1 }, { mine: false, open: false, flag: true, count: 1 }],
+        [{ mine: false, open: false, flag: false, count: 1 }, { mine: true, open: false, flag: false, count: 1 }]
+      ];
+      const badChord = chordAt(badBoard, tiny, 0, 0);
+      if (badChord.type !== 'mine' || badChord.hit.r !== 1 || badChord.hit.c !== 1) errors.push('wrong chord did not hit a mine');
+      const parsed = parseHash('#m.expert.abc123.8.15');
+      if (!parsed || parsed.difficulty !== 'expert' || parsed.first.r !== 8 || parsed.first.c !== 15) errors.push('fragment parse failed');
+      if (parseHash('#m.expert.abc123.20.1')) errors.push('bad fragment accepted');
+      return errors;
+    }
+
+    boardEl.addEventListener('pointerdown', (event) => {
+      suppressClick = false;
+      const button = event.target.closest('.cell');
+      if (!button || event.button !== 0) return;
+      clearTimeout(pressTimer);
+      const row = Number(button.dataset.r), col = Number(button.dataset.c);
+      pressTimer = setTimeout(() => { lastLongPress = Date.now(); suppressClick = true; toggleFlag(row, col); }, 480);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) => boardEl.addEventListener(type, () => clearTimeout(pressTimer)));
+    boardEl.addEventListener('contextmenu', (event) => {
+      const button = event.target.closest('.cell');
+      if (!button) return;
+      event.preventDefault();
+      suppressClick = true;
+      if (Date.now() - lastLongPress > 250) toggleFlag(Number(button.dataset.r), Number(button.dataset.c));
+    });
+    boardEl.addEventListener('click', (event) => {
+      const button = event.target.closest('.cell');
+      if (!button) return;
+      focus = { r: Number(button.dataset.r), c: Number(button.dataset.c) };
+      if (suppressClick) { suppressClick = false; return; }
+      activate(focus.r, focus.c);
+    });
+    boardEl.addEventListener('keydown', (event) => {
+      const button = event.target.closest('.cell');
+      if (!button) return;
+      const spec = DIFFICULTIES[game.difficulty];
+      let row = Number(button.dataset.r), col = Number(button.dataset.c);
+      if (event.key === 'ArrowRight') col = Math.min(spec.cols - 1, col + 1);
+      else if (event.key === 'ArrowLeft') col = Math.max(0, col - 1);
+      else if (event.key === 'ArrowDown') row = Math.min(spec.rows - 1, row + 1);
+      else if (event.key === 'ArrowUp') row = Math.max(0, row - 1);
+      else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); focus = { r: row, c: col }; activate(row, col); return; }
+      else if (event.key.toLowerCase() === 'f') { event.preventDefault(); focus = { r: row, c: col }; toggleFlag(row, col); return; }
+      else return;
+      event.preventDefault();
+      focus = { r: row, c: col };
+      const next = boardEl.querySelector(`[data-r="${row}"][data-c="${col}"]`);
+      boardEl.querySelectorAll('.cell').forEach((cell) => cell.tabIndex = -1);
+      if (next) { next.tabIndex = 0; next.focus(); }
+    });
+
+    newBoardBtn.addEventListener('click', () => newGame(game.difficulty));
+    diffPill.addEventListener('click', openDiffDialog);
+    document.querySelectorAll('.mode-seg button').forEach((button) => button.addEventListener('click', () => {
+      const wantFlag = button.dataset.mode === 'flag';
+      if (!game || game.flagMode === wantFlag) return;
+      game.flagMode = wantFlag;
+      saveProgress();
+      render();
+      setStatus(wantFlag ? 'Flag mode is on. Tap a hidden cell to flag it.' : 'Reveal mode is on. Tap a hidden cell to open it.');
+    }));
+    diffDialog.addEventListener('click', (event) => {
+      const option = event.target.closest('.diff-option');
+      if (!option) return;
+      diffDialog.close();
+      if (option.dataset.diff !== game.difficulty) newGame(option.dataset.diff);
+    });
+    endDialog.addEventListener('click', (event) => {
+      if (event.target.closest('#endAgain')) { endDialog.close(); newGame(game.difficulty); }
+      else if (event.target.closest('#endReview')) endDialog.close();
+      else if (event.target.closest('#endDiff')) { endDialog.close(); openDiffDialog(); }
+    });
+    document.getElementById('rulesBtn').addEventListener('click', () => openDialog(rulesDialog));
+    document.getElementById('statsBtn').addEventListener('click', () => { renderStats(); openDialog(statsDialog); });
+    document.querySelectorAll('.dialog-close').forEach((button) => button.addEventListener('click', () => button.closest('dialog').close()));
+    [...document.querySelectorAll('dialog')].forEach((dialog) => dialog.addEventListener('close', () => { if (lastFocus && document.contains(lastFocus)) lastFocus.focus(); }));
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      const dialog = [...document.querySelectorAll('dialog')].find((item) => item.open);
+      if (!dialog) return;
+      event.preventDefault();
+      dialog.close();
+    });
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(location.href); setStatus(game.placed ? 'Board link copied.' : 'Link copied. The minefield is fixed after the first reveal.', 'good'); }
+      catch { setStatus('Copy the address from the browser to share this board.'); }
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (!game) return;
+      if (document.hidden) { game.elapsedMs = currentElapsed(); game.runningSince = null; saveProgress(); renderTimer(); }
+      else if (game.status === 'playing') startTimer();
+    });
+    window.addEventListener('beforeunload', () => { if (game) { game.elapsedMs = currentElapsed(); game.runningSince = null; saveProgress(); } });
+    window.addEventListener('hashchange', () => {
+      if (syncingHash) return;
+      const fragment = parseHash(location.hash);
+      if (!fragment) return;
+      if (samePuzzle(fragment, game)) return;
+      const saved = loadProgress();
+      if (saved.snapshot && samePuzzle(fragment, saved.snapshot)) resume(saved.snapshot);
+      else startClean(fragment);
+    });
+
+    const checkErrors = selfCheck();
+    if (checkErrors.length) setStatus(`Board check failed: ${checkErrors.join('; ')}`, 'bad');
+    const fragment = parseHash(location.hash);
+    if (fragment && progress.snapshot && samePuzzle(fragment, progress.snapshot)) resume(progress.snapshot);
+    else if (fragment) startClean(fragment);
+    else if (progress.snapshot) resume(progress.snapshot);
+    else newGame(progress.lastDifficulty || 'beginner');
+    globalThis.minesweeper = { selfCheck, reveal, toggleFlag, chord, newGame, activate, placeMines, parseHash, currentGame: () => game, progress: () => progress };
+  </script>
+</body>
+</html>

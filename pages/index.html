@@ -217,6 +217,36 @@
     .escape-mini span:nth-child(1) { top: 10px; }
     .escape-mini span:nth-child(2) { top: 34px; border-radius: 50%; }
     .escape-mini span:nth-child(3) { top: 55px; width: 13px; height: 13px; }
+    .mine-mini {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      height: 72px;
+    }
+    .mine-mini span {
+      border-radius: 6px;
+      background: linear-gradient(180deg, #8fb39a, #648771);
+      border: 1px solid #4d6b56;
+    }
+    .mine-mini .open {
+      display: grid;
+      place-items: center;
+      background: #d7e4d6;
+      color: #2a6fdb;
+      font-size: .85rem;
+      font-weight: 900;
+    }
+    .mine-mini .flag { position: relative; }
+    .mine-mini .flag::before {
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 7px;
+      border-left: 8px solid #d4534a;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+    .mine-mini .boom { background: #c4473a; }
 
     .copy h2 {
       margin: 0 0 4px;
@@ -290,6 +320,20 @@
             <h2>Escape Rooms</h2>
             <p>Four illustrated adventures built from connected rooms, objects, clues, and authored puzzles.</p>
             <span class="play">Enter</span>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a href="minesweeper/">
+          <div class="mine-mini" aria-hidden="true">
+            <span class="open">1</span><span class="flag"></span><span></span>
+            <span class="open">1</span><span class="boom"></span><span></span>
+            <span></span><span></span><span></span>
+          </div>
+          <div class="copy">
+            <h2>Minesweeper</h2>
+            <p>Clear the field on beginner, intermediate, and expert boards. Share a minefield or resume it later.</p>
+            <span class="play">Sweep</span>
           </div>
         </a>
       </li>
